@@ -1,0 +1,23 @@
+learning_rate: 0.001
+batch_size: 32
+num_epochs: 50
+optimizer: Adam
+loss_function: CrossEntropyLoss
+validation_split: 0.2
+shuffle: true
+image_size: 
+  width: 256
+  height: 256
+augmentation:
+  horizontal_flip: true
+  vertical_flip: false
+  rotation: 15
+  brightness: 0.1
+  contrast: 0.1
+ndfi:
+  scaling_value: 50.0
+  threshold: 0.5
+logging:
+  log_interval: 10
+  save_model: true
+  model_save_path: "./models/best_model.pth"

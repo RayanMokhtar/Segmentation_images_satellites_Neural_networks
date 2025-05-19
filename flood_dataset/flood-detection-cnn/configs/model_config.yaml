@@ -1,0 +1,62 @@
+model:
+  name: AdvancedCNN
+  input_size: [256, 256, 2]  # Height, Width, Channels (VH and VV)
+  num_classes: 2  # 0: No Flood, 1: Flood
+  layers:
+    - type: Conv2D
+      filters: 32
+      kernel_size: 3
+      activation: relu
+      padding: same
+    - type: Conv2D
+      filters: 32
+      kernel_size: 3
+      activation: relu
+      padding: same
+    - type: MaxPooling2D
+      pool_size: 2
+    - type: Conv2D
+      filters: 64
+      kernel_size: 3
+      activation: relu
+      padding: same
+    - type: Conv2D
+      filters: 64
+      kernel_size: 3
+      activation: relu
+      padding: same
+    - type: MaxPooling2D
+      pool_size: 2
+    - type: Conv2D
+      filters: 128
+      kernel_size: 3
+      activation: relu
+      padding: same
+    - type: Conv2D
+      filters: 128
+      kernel_size: 3
+      activation: relu
+      padding: same
+    - type: MaxPooling2D
+      pool_size: 2
+    - type: Flatten
+    - type: Dense
+      units: 256
+      activation: relu
+    - type: Dropout
+      rate: 0.5
+    - type: Dense
+      units: num_classes
+      activation: softmax
+
+ndfi:
+  enabled: true
+  scaling_value_vh: 50.0
+  scaling_value_vv: 100.0
+
+image_processing:
+  normalization:
+    mean: [0.5, 0.5]
+    std: [0.5, 0.5]
+  resizing:
+    size: [256, 256]

@@ -1,0 +1,11 @@
+numpy
+torch
+torchvision
+rasterio
+opencv-python
+scikit-learn
+matplotlib
+tqdm
+PyYAML
+albumentations
+seaborn
