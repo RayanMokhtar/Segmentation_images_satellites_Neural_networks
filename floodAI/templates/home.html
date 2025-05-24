@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prévisions des inondations</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid px-4">
+            <div class="d-flex w-100 align-items-center justify-content-between">
+                <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                    <span class="logo-circle">
+                        <i class="fas fa-fire"></i>
+                        <i class="fas fa-tint"></i>
+                    </span>
+                    <span class="logo-text">
+                        <span class="fire-text">Fire</span><span class="flood-text">Flood</span><span class="ai-text">AI</span>
+                    </span>
+                </a>
+                {% if user.is_authenticated %}
+                <div class="d-flex align-items-center gap-2">
+                    <span class="profile-icon"><i class="fas fa-user-circle"></i></span>
+                    <a href="{% url 'profil' %}" class="profile-name text-decoration-none">{{ user.first_name|default:user.username }}</a>
+                    <a href="{% url 'logout' %}" class="btn btn-outline-secondary btn-sm ms-2">Déconnexion</a>
+                </div>
+                {% else %}
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{% url 'login' %}" class="btn btn-login">Connexion</a>
+                    <a href="{% url 'register' %}" class="btn btn-outline-primary">S'inscrire</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <div class="col-md-3">
+                <div class="sidebar">
+                    <!-- Zone pour les informations de région sélectionnée -->
+                    <div id="region-info" class="mb-4"></div>
+                    
+                    <h1 class="prediction-title">Prévisions des inondations</h1>
+                    <div class="risk-levels">
+                        <div class="risk-item high">
+                            <div class="risk-date">lundi 24 mars</div>
+                            <div class="risk-info">
+                                <div class="risk-level">Risque d'inondation : Élevé</div>
+                                <div class="weather-info">
+                                    <div>Température : 16.4°C</div>
+                                    <div>Précipitations : 36.9mm</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="risk-item medium">
+                            <div class="risk-date">mardi 25 mars</div>
+                            <div class="risk-info">
+                                <div class="risk-level">Risque d'inondation : Moyen</div>
+                                <div class="weather-info">
+                                    <div>Température : 18.6°C</div>
+                                    <div>Précipitations : 91.3mm</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="risk-item medium">
+                            <div class="risk-date">mercredi 26 mars</div>
+                            <div class="risk-info">
+                                <div class="risk-level">Risque d'inondation : Moyen</div>
+                                <div class="weather-info">
+                                    <div>Température : 23.9°C</div>
+                                    <div>Précipitations : 36.4mm</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="risk-item low">
+                            <div class="risk-date">jeudi 27 mars</div>
+                            <div class="risk-info">
+                                <div class="risk-level">Risque d'inondation : Faible</div>
+                                <div class="weather-info">
+                                    <div>Température : 27.5°C</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Conteneur pour les notifications -->
+    <div id="notifications-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
+    <script src="/static/js/map.js"></script>
+</body>
+</html>

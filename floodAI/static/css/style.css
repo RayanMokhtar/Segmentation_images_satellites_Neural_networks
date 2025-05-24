@@ -1,0 +1,665 @@
+/* Variables */
+:root {
+    --primary-color: #1a73e8;
+    --text-primary: #202124;
+    --text-secondary: #5f6368;
+    --border-color: rgba(0, 0, 0, 0.12);
+    --hover-bg: #f1f3f4;
+    --marker-color: #003B73;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #fff;
+}
+
+.navbar {
+    background-color: white;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0.5rem 0;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: #1a73e8;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.logo-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.logo-icon i {
+    font-size: 1.3rem;
+    transition: transform 0.3s ease;
+}
+
+.logo-icon i.fa-fire {
+    color: #ff4d4d !important;
+}
+
+.logo-icon i.fa-water {
+    color: #4d94ff !important;
+}
+
+.navbar-brand:hover .logo-icon i.fa-fire {
+    transform: translateY(-2px);
+}
+
+.navbar-brand:hover .logo-icon i.fa-water {
+    transform: translateY(2px);
+}
+
+.waves-icon {
+    font-size: 24px;
+    color: #1a73e8;
+}
+
+.nav-link {
+    color: var(--text-secondary);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+}
+
+.nav-link.active {
+    color: var(--primary-color);
+}
+
+.nav-link:hover {
+    color: #1a73e8;
+}
+
+.sidebar {
+    background-color: white;
+    height: calc(100vh - 56px);
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.prediction-title {
+    font-size: 24px;
+    font-weight: 500;
+    color: #202124;
+    margin-bottom: 24px;
+}
+
+.risk-levels {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.risk-item {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.risk-item.high {
+    border-left: 4px solid #d93025;
+}
+
+.risk-item.medium {
+    border-left: 4px solid #f29900;
+}
+
+.risk-item.low {
+    border-left: 4px solid #188038;
+}
+
+.risk-date {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.risk-info {
+    font-size: 14px;
+}
+
+.risk-level {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.weather-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.weather-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.weather-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    padding-right: 8px;
+}
+
+.weather-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    color: #5f6368;
+    flex-shrink: 0;
+}
+
+.weather-item span {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.weather-item span:first-of-type {
+    color: #5f6368;
+    margin-right: 4px;
+    flex-shrink: 0;
+    min-width: 95px;
+}
+
+.weather-item span:last-child {
+    font-weight: 500;
+}
+
+/* Style des niveaux de risque */
+.risk-item.high .risk-level span:last-child {
+    color: #d93025;
+}
+
+.risk-item.medium .risk-level span:last-child {
+    color: #f29900;
+}
+
+.risk-item.low .risk-level span:last-child {
+    color: #188038;
+}
+
+#map {
+    height: calc(100vh - 56px);
+    width: 100%;
+}
+
+/* Styles pour les contrôles de la carte */
+.leaflet-control-container .leaflet-top {
+    top: 20px;
+}
+
+.leaflet-control-container .leaflet-left {
+    left: 20px;
+}
+
+/* Style du conteneur des boutons */
+.leaflet-control-zoom,
+.leaflet-control-locate {
+    background: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+    margin: 0 !important;
+    padding: 4px !important;
+}
+
+.leaflet-control-zoom {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 1px !important;
+}
+
+/* Style commun pour tous les boutons de contrôle */
+.leaflet-control-zoom a,
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out,
+.leaflet-control-locate a {
+    width: 32px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    background-color: white !important;
+    color: var(--text-secondary) !important;
+    font-size: 18px !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background-color 0.2s ease !important;
+}
+
+/* Style au survol */
+.leaflet-control-zoom a:hover,
+.leaflet-control-locate a:hover {
+    background-color: var(--hover-bg) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* Style spécifique pour le séparateur entre les boutons */
+.leaflet-control-zoom-in {
+    border-right: 1px solid #e8eaed !important;
+}
+
+.leaflet-control-zoom-out {
+    border-right: 1px solid #e8eaed !important;
+}
+
+/* Style de l'icône de localisation */
+.fa-location-crosshairs {
+    font-size: 16px !important;
+}
+
+/* Style du marqueur de localisation */
+.location-marker {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.location-marker img {
+    width: 32px;
+    height: 32px;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+}
+
+/* Style du conteneur des contrôles */
+.custom-controls-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    padding: 4px;
+    display: flex;
+    gap: 4px;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        height: auto;
+        margin-bottom: 20px;
+    }
+    
+    #map {
+        height: 500px;
+    }
+}
+
+/* Logo rond avec feu et eau */
+.logo-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-right: 6px;
+    font-size: 1.2rem;
+    border: 2px solid #e0e0e0;
+    gap: 2px;
+}
+.logo-circle i.fa-fire {
+    color: #ff4d4d;
+    font-size: 1.2rem;
+    position: relative;
+    left: -2px;
+    z-index: 2;
+}
+.logo-circle i.fa-tint {
+    color: #1a73e8;
+    font-size: 1.2rem;
+    position: relative;
+    left: 2px;
+    z-index: 2;
+}
+
+.logo-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+}
+.fire-text {
+    color: #ff4d4d;
+}
+.flood-text {
+    color: #1a73e8;
+}
+.ai-text {
+    color: #222;
+    margin-left: 2px;
+}
+
+.btn-login {
+    background: linear-gradient(90deg, #1a73e8 60%, #4d94ff 100%);
+    color: #fff;
+    font-weight: 700;
+    border-radius: 24px;
+    padding: 7px 28px;
+    border: none;
+    box-shadow: 0 4px 16px rgba(26,115,232,0.10);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
+    font-size: 1.08rem;
+    letter-spacing: 0.5px;
+    outline: none;
+    position: relative;
+    overflow: hidden;
+}
+.btn-login:hover, .btn-login:focus {
+    background: linear-gradient(90deg, #1761c1 60%, #1a73e8 100%);
+    color: #fff;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(26,115,232,0.18);
+    transform: translateY(-2px) scale(1.04);
+}
+.btn-login:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(26,115,232,0.10);
+}
+
+.profile-icon i {
+    font-size: 2rem;
+    color: #1a73e8;
+    vertical-align: middle;
+}
+.profile-name {
+    font-weight: 600;
+    color: #222;
+    font-size: 1.08rem;
+    letter-spacing: 0.5px;
+}
+.btn-outline-secondary.btn-sm {
+    border-radius: 18px;
+    padding: 4px 16px;
+    font-weight: 600;
+    font-size: 0.98rem;
+    border: 1.5px solid #b0b0b0;
+    color: #555;
+    background: #fff;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+.btn-outline-secondary.btn-sm:hover {
+    background: #f1f3f4;
+    color: #1a73e8;
+    border-color: #1a73e8;
+}
+
+/* Styles pour les informations de région */
+#region-info {
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: none; /* Caché par défaut, affiché quand une région est sélectionnée */
+}
+
+#region-info:not(:empty) {
+    display: block;
+}
+
+.region-header {
+    margin-bottom: 15px;
+}
+
+.region-header h2 {
+    font-size: 1.4rem;
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+}
+
+.region-risk {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+    color: white;
+    margin: 5px 0;
+}
+
+.region-risk.faible {
+    background-color: #188038;
+}
+
+.region-risk.moyen {
+    background-color: #f29900;
+}
+
+.region-risk.élevé {
+    background-color: #d93025;
+}
+
+.region-risk.très {
+    background-color: #7a0000;
+}
+
+.region-subscription {
+    margin-top: 15px;
+}
+
+.region-subscription .btn {
+    width: 100%;
+}
+
+/* Styles pour les notifications */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    padding: 15px 20px;
+    border-radius: 4px;
+    color: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    animation: slide-in 0.3s ease-out;
+}
+
+.notification.success {
+    background-color: #188038;
+}
+
+.notification.error {
+    background-color: #d93025;
+}
+
+.notification.fade-out {
+    animation: fade-out 0.5s ease-out forwards;
+}
+
+@keyframes slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Styles pour les risques */
+.high {
+    border-left: 4px solid #d93025;
+}
+
+.medium {
+    border-left: 4px solid #f29900;
+}
+
+.low {
+    border-left: 4px solid #188038;
+}
+
+/* Personnalisation des marqueurs sur la carte */
+.location-marker img {
+    width: 100%;
+    height: 100%;
+}
+
+/* Styles responsifs pour les petits écrans */
+@media (max-width: 768px) {
+    .sidebar {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+}
+
+/* Styles pour les informations de localisation */
+#location-info {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.3s ease;
+}
+
+.location-header h3 {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 0 0 8px 0;
+    font-weight: 500;
+}
+
+.location-name {
+    font-size: 20px;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+/* Nouveau style pour la ligne avec ville et bouton */
+.location-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.location-info-row .location-name {
+    margin-bottom: 0;
+    flex: 1;
+}
+
+/* Style du bouton d'abonnement */
+.subscribe-btn {
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(26, 115, 232, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    margin-left: auto;
+}
+
+.subscribe-btn:hover {
+    background: #1565c0;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(26, 115, 232, 0.25);
+}
+
+.subscribe-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(26, 115, 232, 0.15);
+}
+
+.subscribe-btn i {
+    font-size: 11px;
+}
+
+/* Style du bouton de connexion requis */
+.login-required-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(108, 117, 125, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    margin-left: auto;
+}
+
+.login-required-btn:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(108, 117, 125, 0.25);
+}
+
+.login-required-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(108, 117, 125, 0.15);
+}
+
+.login-required-btn i {
+    font-size: 11px;
+}
+
+/* Spinner pour l'état de chargement */
+.loading-location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(26, 115, 232, 0.3);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

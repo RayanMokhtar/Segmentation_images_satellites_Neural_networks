@@ -1,0 +1,149 @@
+{% load form_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - FireFloodAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(120deg, #e3f0ff 0%, #f8f9fa 100%);
+            min-height: 100vh;
+        }
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(26,115,232,0.10);
+            padding: 2.5rem 2rem 2rem 2rem;
+            max-width: 370px;
+            width: 100%;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-header .login-icon {
+            font-size: 3.5rem;
+            color: #1a73e8;
+        }
+        .login-title {
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: #1a73e8;
+            margin-top: 0.8rem;
+            text-align: center;
+        }
+        .form-label {
+            font-weight: 600;
+        }
+        .btn-login-page {
+            width: 100%;
+            background: linear-gradient(90deg, #1a73e8 60%, #4d94ff 100%);
+            color: #fff;
+            font-weight: 700;
+            border-radius: 24px;
+            padding: 10px 0;
+            border: none;
+            margin-top: 1rem;
+            transition: background 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.10);
+        }
+        .btn-login-page:hover {
+            background: linear-gradient(90deg, #1761c1 60%, #1a73e8 100%);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(26,115,232,0.18);
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        .login-footer a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin-top: 0.25rem;
+            color: #d93025;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <span class="login-icon"><i class="fas fa-user-lock"></i></span>
+                <div class="login-title">Connexion</div>
+            </div>
+            
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                    {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <label for="{{ form.username.id_for_label }}" class="form-label">Nom d'utilisateur</label>
+                    {{ form.username|add_class:"form-control" }}
+                    {% if form.username.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.username.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.password.id_for_label }}" class="form-label">Mot de passe</label>
+                    {{ form.password|add_class:"form-control" }}
+                    {% if form.password.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.password.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="btn btn-login-page">Se connecter</button>
+            </form>
+            <div class="login-footer">
+                <a href="{% url 'register' %}">Créer un compte</a> | <a href="/">Retour à l'accueil</a>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Appliquer Bootstrap aux champs de formulaire
+        document.addEventListener('DOMContentLoaded', function() {
+            var inputs = document.querySelectorAll('input');
+            inputs.forEach(function(input) {
+                input.classList.add('form-control');
+            });
+        });
+    </script>
+</body>
+</html>

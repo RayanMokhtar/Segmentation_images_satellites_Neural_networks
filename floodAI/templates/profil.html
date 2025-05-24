@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil - FireFloodAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(120deg, #e3f0ff 0%, #f8f9fa 100%);
+            min-height: 100vh;
+        }
+        .profile-container {
+            max-width: 480px;
+            margin: 48px auto 0 auto;
+            padding: 0 12px;
+        }
+        .profile-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .profile-header .profile-icon {
+            font-size: 4.5rem;
+            color: #1a73e8;
+        }
+        .profile-header .profile-name {
+            font-size: 2.1rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            color: #1a73e8;
+        }
+        .profile-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(26,115,232,0.10);
+            padding: 1.5rem 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .profile-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a73e8;
+            margin-bottom: 1rem;
+        }
+        .profile-info-row {
+            display: flex;
+            margin-bottom: 0.5rem;
+        }
+        .profile-info-label {
+            width: 110px;
+            color: #5f6368;
+            font-weight: 500;
+        }
+        .profile-info-value {
+            color: #222;
+            font-weight: 600;
+        }
+        .alertes-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(26,115,232,0.10);
+            padding: 1.5rem 1.2rem;
+        }
+        .alertes-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #d93025;
+            margin-bottom: 1rem;
+        }
+        .alerte-item {
+            color: #d93025;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .btn-retour {
+            display: block;
+            margin: 2.5rem auto 0 auto;
+            background: #1a73e8;
+            color: #fff;
+            font-weight: 600;
+            border-radius: 24px;
+            padding: 8px 32px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.10);
+            transition: background 0.2s;
+            text-align: center;
+            text-decoration: none;
+        }
+        .btn-retour:hover {
+            background: #1761c1;
+            color: #fff;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <div class="profile-header">
+            <span class="profile-icon"><i class="fas fa-user-circle"></i></span>
+            <div class="profile-name">{{ infos.prenom }} {{ infos.nom }}</div>
+        </div>
+        <div class="profile-card">
+            <div class="profile-card-title">Mes informations</div>
+            <div class="profile-info-row"><span class="profile-info-label">Nom :</span><span class="profile-info-value">{{ infos.nom }}</span></div>
+            <div class="profile-info-row"><span class="profile-info-label">Prénom :</span><span class="profile-info-value">{{ infos.prenom }}</span></div>
+            <div class="profile-info-row"><span class="profile-info-label">Email :</span><span class="profile-info-value">{{ infos.mail }}</span></div>
+            <div class="profile-info-row"><span class="profile-info-label">Adresse :</span><span class="profile-info-value">{{ infos.adresse }}</span></div>
+        </div>
+        <div class="alertes-card">
+            <div class="alertes-card-title">Alertes pour {{ infos.ville }}</div>
+            {% for alerte in alertes %}
+            <div class="alerte-item">{{ alerte }}</div>
+            {% endfor %}
+        </div>        <div class="d-flex gap-3 justify-content-center">
+            <a href="/" class="btn-retour">&#8592; Retour à l'accueil</a>
+            <a href="{% url 'logout' %}" class="btn-retour" style="background-color: #d93025;">Déconnexion</a>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">
+        {% for message in messages %}
+        <div class="toast show" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header {% if message.tags %}bg-{{ message.tags }}{% else %}bg-primary{% endif %} text-white">
+                <strong class="me-auto">Notification</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">
+                {{ message }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-hide toasts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const toasts = document.querySelectorAll('.toast');
+            toasts.forEach(toast => {
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>

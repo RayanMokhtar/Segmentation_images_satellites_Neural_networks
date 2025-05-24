@@ -1,0 +1,258 @@
+{% load form_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - FireFloodAI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(120deg, #e3f0ff 0%, #f8f9fa 100%);
+            min-height: 100vh;
+        }
+        .login-container {
+            max-width: 480px;
+            margin: 48px auto;
+            padding: 0 12px;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(26,115,232,0.10);
+            padding: 1.8rem 1.5rem;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .login-header .login-icon {
+            font-size: 3.5rem;
+            color: #1a73e8;
+        }
+        .login-header .login-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            color: #1a73e8;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            font-weight: 600;
+            color: #5f6368;
+            margin-bottom: 0.5rem;
+        }
+        .form-control {
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            border: 1px solid #dadce0;
+        }
+        .form-control:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 0.2rem rgba(26,115,232,0.15);
+        }
+        .btn-submit {
+            display: block;
+            width: 100%;
+            background: #1a73e8;
+            color: #fff;
+            font-weight: 600;
+            border-radius: 24px;
+            padding: 10px 16px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.10);
+            transition: background 0.2s;
+            margin-top: 2rem;
+        }
+        .btn-submit:hover {
+            background: #1761c1;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #5f6368;
+        }
+        .login-footer a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin-top: 0.25rem;
+            color: #d93025;
+            font-size: 0.9rem;
+        }
+        .alert-error {
+            background-color: #fbe9e7;
+            color: #d93025;
+            border-color: #ffcdd2;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-success {
+            background-color: #e8f5e9;
+            color: #388e3c;
+            border-color: #c8e6c9;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .form-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <span class="login-icon"><i class="fas fa-user-plus"></i></span>
+                <h1 class="login-title">Inscription</h1>
+            </div>
+            
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">Nom d'utilisateur</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.username.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}">Prénom</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.first_name.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}">Nom</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.last_name.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">Email</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.email.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.adresse.id_for_label }}">Adresse</label>
+                    {{ form.adresse }}
+                    {% if form.adresse.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.adresse.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.ville.id_for_label }}">Ville</label>
+                    {{ form.ville }}
+                    {% if form.ville.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.ville.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.code_postal.id_for_label }}">Code postal</label>
+                    {{ form.code_postal }}
+                    {% if form.code_postal.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.code_postal.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.password1.id_for_label }}">Mot de passe</label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.password1.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    <div class="form-text">{{ form.password1.help_text|safe }}</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.password2.id_for_label }}">Confirmation du mot de passe</label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.password2.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="btn-submit">S'inscrire</button>
+            </form>
+        </div>
+        
+        <div class="login-footer">
+            Déjà inscrit? <a href="{% url 'login' %}">Connectez-vous ici</a>
+        </div>
+    </div>
+    
+    <script>
+        // Appliquer Bootstrap aux champs de formulaire
+        document.addEventListener('DOMContentLoaded', function() {
+            var inputs = document.querySelectorAll('input');
+            inputs.forEach(function(input) {
+                input.classList.add('form-control');
+            });
+        });
+    </script>
+</body>
+</html>
