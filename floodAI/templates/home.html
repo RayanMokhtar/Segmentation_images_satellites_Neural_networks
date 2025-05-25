@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -15,10 +16,7 @@
         <div class="container-fluid px-4">
             <div class="d-flex w-100 align-items-center justify-content-between">
                 <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-                    <span class="logo-circle">
-                        <i class="fas fa-fire"></i>
-                        <i class="fas fa-tint"></i>
-                    </span>
+                    <img src="{% static 'images/logopds.png' %}" alt="Logo" class="logo-image">
                     <span class="logo-text">
                         <span class="fire-text">Fire</span><span class="flood-text">Flood</span><span class="ai-text">AI</span>
                     </span>

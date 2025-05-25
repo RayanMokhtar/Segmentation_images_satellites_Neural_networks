@@ -295,6 +295,17 @@ body {
     }
 }
 
+/* Logo image */
+.logo-image {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+    border: 2px solid #e0e0e0;
+    margin-right: 6px;
+}
+
 /* Logo rond avec feu et eau */
 .logo-circle {
     width: 40px;
@@ -333,15 +344,31 @@ body {
     display: flex;
     align-items: baseline;
     gap: 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
+
 .fire-text {
-    color: #ff4d4d;
+    background: linear-gradient(135deg, #ff4d4d 0%, #e6443a 50%, #cc3a2f 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #ff4d4d; /* Fallback pour les navigateurs non compatibles */
 }
+
 .flood-text {
-    color: #1a73e8;
+    background: linear-gradient(135deg, #e6443a 0%, #4d7ce6 50%, #1a73e8 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #1a73e8; /* Fallback pour les navigateurs non compatibles */
 }
+
 .ai-text {
-    color: #222;
+    background: linear-gradient(135deg, #1a73e8 0%, #808080 50%, #666666 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: #666666; /* Fallback pour les navigateurs non compatibles */
     margin-left: 2px;
 }
 
