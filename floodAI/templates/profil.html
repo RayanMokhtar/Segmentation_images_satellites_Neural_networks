@@ -95,6 +95,53 @@
             color: #fff;
             text-decoration: none;
         }
+        .abonnements-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(26,115,232,0.10);
+            padding: 1.5rem 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .abonnements-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a73e8;
+            margin-bottom: 1rem;
+        }
+        .abonnement-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        .abonnement-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .abonnement-name {
+            font-weight: 500;
+            color: #202124;
+        }
+        .btn-desabonner {
+            background: none;
+            border: none;
+            color: #d93025;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-desabonner:hover {
+            text-decoration: underline;
+        }
+        .no-abonnement {
+            font-style: italic;
+            color: #5f6368;
+        }
     </style>
 </head>
 <body>
@@ -108,14 +155,33 @@
             <div class="profile-info-row"><span class="profile-info-label">Nom :</span><span class="profile-info-value">{{ infos.nom }}</span></div>
             <div class="profile-info-row"><span class="profile-info-label">Prénom :</span><span class="profile-info-value">{{ infos.prenom }}</span></div>
             <div class="profile-info-row"><span class="profile-info-label">Email :</span><span class="profile-info-value">{{ infos.mail }}</span></div>
-            <div class="profile-info-row"><span class="profile-info-label">Adresse :</span><span class="profile-info-value">{{ infos.adresse }}</span></div>
         </div>
+        
+        <!-- Ajout de la section Abonnements -->
+        <div class="abonnements-card">
+            <div class="abonnements-card-title">Mes abonnements</div>
+            {% if abonnements %}
+                {% for abonnement in abonnements %}
+                <div class="abonnement-item">
+                    <span class="abonnement-name">{{ abonnement.ville }}</span>
+                    <a href="{% url 'unsubscribe_city' abonnement.id %}" class="btn-desabonner">
+                        <i class="fas fa-bell-slash"></i> Désabonner
+                    </a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-abonnement">Vous n'êtes abonné à aucune ville. Abonnez-vous pour recevoir des alertes en cas de risque d'inondation.</div>
+            {% endif %}
+        </div>
+        
         <div class="alertes-card">
-            <div class="alertes-card-title">Alertes pour {{ infos.ville }}</div>
+            <div class="alertes-card-title">Alertes récentes</div>
             {% for alerte in alertes %}
             <div class="alerte-item">{{ alerte }}</div>
             {% endfor %}
-        </div>        <div class="d-flex gap-3 justify-content-center">
+        </div>
+        
+        <div class="d-flex gap-3 justify-content-center">
             <a href="/" class="btn-retour">&#8592; Retour à l'accueil</a>
             <a href="{% url 'logout' %}" class="btn-retour" style="background-color: #d93025;">Déconnexion</a>
         </div>

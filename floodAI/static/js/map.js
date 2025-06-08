@@ -19,12 +19,10 @@ function formatDate(date) {
     return date.toLocaleDateString('fr-FR', options);
 }
 
-// Fonction pour récupérer les données météo
+// Fonction pour récupérer les données météo via la vue Django
 async function fetchWeatherData(lat, lng) {
     try {
-        const response = await fetch(
-            `${WEATHER_API_URL}/forecast?latitude=${lat}&longitude=${lng}&hourly=temperature_2m,precipitation,relative_humidity_2m,wind_speed_10m&windspeed_unit=kmh&timezone=auto`
-        );
+        const response = await fetch(`/api/weather/?lat=${lat}&lng=${lng}`);
         const data = await response.json();
         return data;
     } catch (error) {
@@ -33,33 +31,14 @@ async function fetchWeatherData(lat, lng) {
     }
 }
 
-// Fonction pour récupérer les informations de lieu via Nominatim
+// Fonction pour récupérer les informations de lieu via la vue Django
 async function fetchLocationInfo(lat, lng) {
     try {
-        // Timeout après 3 secondes pour ne pas bloquer l'interface trop longtemps
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        
-        const response = await fetch(
-            `${NOMINATIM_API_URL}?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`, 
-            {
-                headers: {
-                    'Accept-Language': 'fr', // Préférer les résultats en français
-                    'User-Agent': 'TestScript/1.0 (contact@example.com)' // User-agent fonctionnel
-                },
-                signal: controller.signal
-            }
-        );
-        
-        clearTimeout(timeoutId);
+        const response = await fetch(`/api/location/?lat=${lat}&lng=${lng}`);
         const data = await response.json();
         return data;
     } catch (error) {
-        if (error.name === 'AbortError') {
-            console.log('Recherche de localité abandonnée après délai dépassé');
-        } else {
-            console.error('Erreur lors de la récupération des informations de lieu:', error);
-        }
+        console.error('Erreur lors de la récupération des informations de lieu:', error);
         return null;
     }
 }
@@ -286,7 +265,7 @@ async function updatePredictions(lat, lng) {
 }
 
 // Fonction pour afficher les informations de localisation dans la barre latérale
-function updateLocationInfo(locationData) {
+async function updateLocationInfo(locationData) {
     // Créer ou récupérer le conteneur pour les infos de localisation
     let locationInfoDiv = document.getElementById('location-info');
     if (!locationInfoDiv) {
@@ -318,10 +297,34 @@ function updateLocationInfo(locationData) {
         locationName = 'Lieu sélectionné';
     }
     
+    // Afficher temporairement les infos de base pendant la vérification d'abonnement
+    locationInfoDiv.innerHTML = `
+        <div class="location-header">
+            <h3>Lieu sélectionné</h3>
+            <div class="location-info-row">
+                <div class="location-name">${locationName}</div>
+                <div class="subscription-loading"><span class="spinner"></span></div>
+            </div>
+        </div>
+    `;
+    
     // Vérifier si l'utilisateur est connecté (présence du nom de profil)
     const isLoggedIn = document.querySelector('.profile-name');
     
-    // Construire le HTML pour afficher les informations de localisation (simplifié)
+    let isSubscribed = false;
+    
+    // Si l'utilisateur est connecté, vérifier s'il est abonné à cette ville
+    if (isLoggedIn) {
+        try {
+            const response = await fetch(`/api/check-subscription/?city_name=${encodeURIComponent(locationName)}`);
+            const data = await response.json();
+            isSubscribed = data.success && data.is_subscribed;
+        } catch (error) {
+            console.error('Erreur lors de la vérification de l\'abonnement:', error);
+        }
+    }
+    
+    // Construire le HTML pour afficher les informations de localisation
     let locationHtml = `
         <div class="location-header">
             <h3>Lieu sélectionné</h3>
@@ -329,18 +332,26 @@ function updateLocationInfo(locationData) {
                 <div class="location-name">${locationName}</div>
     `;
     
-    // Ajouter le bouton seulement si l'utilisateur est connecté
+    // Ajouter le bouton approprié selon l'état de connexion et d'abonnement
     if (isLoggedIn) {
-        locationHtml += `
-                <button class="subscribe-btn" type="button">
+        if (isSubscribed) {
+            locationHtml += `
+                <button class="subscribe-btn subscribed" type="button" onclick="toggleCitySubscription('${locationName}', 'unsubscribe')">
+                    <i class="fas fa-bell-slash"></i> Désabonner
+                </button>
+            `;
+        } else {
+            locationHtml += `
+                <button class="subscribe-btn" type="button" onclick="toggleCitySubscription('${locationName}', 'subscribe')">
                     <i class="fas fa-bell"></i> S'abonner
                 </button>
-        `;
+            `;
+        }
     } else {
         locationHtml += `
-                <button class="login-required-btn" type="button" onclick="window.location.href='/login/'">
-                    <i class="fas fa-sign-in-alt"></i> Se connecter
-                </button>
+            <button class="login-required-btn" type="button" onclick="window.location.href='/login/'">
+                <i class="fas fa-sign-in-alt"></i> Se connecter
+            </button>
         `;
     }
     
@@ -351,6 +362,98 @@ function updateLocationInfo(locationData) {
     
     // Afficher les informations
     locationInfoDiv.innerHTML = locationHtml;
+}
+
+// Fonction pour basculer l'état de l'abonnement (s'abonner ou se désabonner)
+async function toggleCitySubscription(cityName, action) {
+    if (!selectedMarker) return;
+    
+    const lat = selectedMarker.getLatLng().lat;
+    const lng = selectedMarker.getLatLng().lng;
+    
+    try {
+        const response = await fetch('/api/subscribe-city/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: JSON.stringify({
+                city_name: cityName,
+                lat: lat,
+                lng: lng,
+                action: action
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            // Afficher une notification de succès
+            showNotification(data.message, 'success');
+            
+            // Mettre à jour le bouton selon l'état de l'abonnement
+            const subscribeBtn = document.querySelector('.subscribe-btn');
+            if (subscribeBtn) {
+                if (action === 'subscribe') {
+                    subscribeBtn.innerHTML = '<i class="fas fa-bell-slash"></i> Désabonner';
+                    subscribeBtn.classList.add('subscribed');
+                    subscribeBtn.onclick = () => toggleCitySubscription(cityName, 'unsubscribe');
+                } else {
+                    subscribeBtn.innerHTML = '<i class="fas fa-bell"></i> S\'abonner';
+                    subscribeBtn.classList.remove('subscribed');
+                    subscribeBtn.onclick = () => toggleCitySubscription(cityName, 'subscribe');
+                }
+            }
+        } else {
+            showNotification('Erreur: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la modification de l\'abonnement:', error);
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+// Fonction pour obtenir le token CSRF
+function getCsrfToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    return cookieValue || '';
+}
+
+// Fonction pour afficher une notification
+function showNotification(message, type) {
+    const notificationArea = document.getElementById('notification-area') || createNotificationArea();
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span>${message}</span>
+        <button class="close-btn">×</button>
+    `;
+    
+    notificationArea.appendChild(notification);
+    
+    // Supprimer après 5 secondes
+    setTimeout(() => {
+        notification.classList.add('fade-out');
+        setTimeout(() => notification.remove(), 500);
+    }, 5000);
+    
+    // Supprimer au clic sur le bouton de fermeture
+    notification.querySelector('.close-btn').addEventListener('click', () => {
+        notification.remove();
+    });
+}
+
+// Fonction pour créer la zone de notification si elle n'existe pas
+function createNotificationArea() {
+    const area = document.createElement('div');
+    area.id = 'notification-area';
+    area.className = 'notification-area';
+    document.body.appendChild(area);
+    return area;
 }
 
 // Initialisation de la carte au chargement de la page

@@ -3,12 +3,13 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
-from .models import Alerte
+from .models import Alerte, AbonnementVille
 from django.db.models import Q
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django import forms
 from django.http import JsonResponse
 import json
+import requests
 
 # Formulaire d'inscription personnalisé
 class InscriptionForm(UserCreationForm):
@@ -100,10 +101,134 @@ def logout_view(request):
     messages.success(request, 'Vous avez été déconnecté avec succès.')
     return redirect('home')
 
+# Vue pour récupérer les données météo
+def get_weather_data(request):
+    lat = request.GET.get('lat')
+    lng = request.GET.get('lng')
+    if not lat or not lng:
+        return JsonResponse({'error': 'Latitude et longitude sont requis'}, status=400)
+    
+    try:
+        weather_api_url = f'https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lng}&hourly=temperature_2m,precipitation,relative_humidity_2m,wind_speed_10m&windspeed_unit=kmh&timezone=auto'
+        response = requests.get(weather_api_url)
+        response.raise_for_status()
+        return JsonResponse(response.json())
+    except requests.RequestException as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# Vue pour récupérer les informations de localisation
+def get_location_info(request):
+    lat = request.GET.get('lat')
+    lng = request.GET.get('lng')
+    if not lat or not lng:
+        return JsonResponse({'error': 'Latitude et longitude sont requis'}, status=400)
+    
+    try:
+        nominatim_api_url = f'https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lng}&zoom=10&addressdetails=1'
+        headers = {
+            'Accept-Language': 'fr',
+            'User-Agent': 'FloodAI/1.0 (contact@example.com)'
+        }
+        response = requests.get(nominatim_api_url, headers=headers)
+        response.raise_for_status()
+        return JsonResponse(response.json())
+    except requests.RequestException as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# Vue pour vérifier si l'utilisateur est abonné à une ville
+@login_required
+def check_subscription_status(request):
+    city_name = request.GET.get('city_name')
+    if not city_name:
+        return JsonResponse({'success': False, 'error': 'Nom de ville requis'}, status=400)
+    
+    is_subscribed = AbonnementVille.objects.filter(user=request.user, ville=city_name).exists()
+    
+    return JsonResponse({
+        'success': True,
+        'is_subscribed': is_subscribed
+    })
+
+# Vue pour s'abonner/désabonner à une ville
+@login_required
+def subscribe_city(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            city_name = data.get('city_name')
+            lat = data.get('lat')
+            lng = data.get('lng')
+            action = data.get('action', 'subscribe')  # 'subscribe' ou 'unsubscribe'
+            
+            if not all([city_name, lat, lng]):
+                return JsonResponse({'success': False, 'error': 'Données incomplètes'}, status=400)
+            
+            # Désabonnement
+            if action == 'unsubscribe':
+                abonnement = AbonnementVille.objects.filter(user=request.user, ville=city_name)
+                if abonnement.exists():
+                    abonnement.delete()
+                    return JsonResponse({
+                        'success': True, 
+                        'message': f'Désabonnement de {city_name} effectué avec succès',
+                        'is_subscribed': False
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Vous n\'êtes pas abonné à {city_name}'
+                    })
+            
+            # Abonnement (par défaut)
+            else:
+                # Vérifier si l'abonnement existe déjà
+                existing_subscription = AbonnementVille.objects.filter(user=request.user, ville=city_name).exists()
+                if existing_subscription:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Vous êtes déjà abonné à {city_name}',
+                        'is_subscribed': True
+                    })
+                
+                # Créer un nouvel abonnement
+                abonnement = AbonnementVille.objects.create(
+                    user=request.user,
+                    ville=city_name,
+                    latitude=lat,
+                    longitude=lng
+                )
+                
+                return JsonResponse({
+                    'success': True, 
+                    'message': f'Abonnement à {city_name} créé avec succès',
+                    'is_subscribed': True
+                })
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+# Vue pour supprimer un abonnement à une ville
+@login_required
+def unsubscribe_city(request, abonnement_id):
+    try:
+        abonnement = get_object_or_404(AbonnementVille, id=abonnement_id, user=request.user)
+        ville_name = abonnement.ville
+        abonnement.delete()
+        messages.success(request, f'Abonnement à {ville_name} supprimé avec succès.')
+    except Exception as e:
+        messages.error(request, f'Erreur lors de la suppression : {str(e)}')
+    
+    return redirect('profil')
+
 # Vue profil (protégée par login_required)
 @login_required
 def profil(request):
     user = request.user
+    
+    # Récupérer les abonnements de l'utilisateur
+    abonnements = AbonnementVille.objects.filter(user=user).order_by('ville')
     
     # Récupérer quelques alertes génériques pour la démo
     alertes_recentes = Alerte.objects.all().order_by('-date_creation')[:3]
@@ -124,4 +249,8 @@ def profil(request):
         'ville': ''     # Plus utilisé avec le modèle User standard
     }
     
-    return render(request, 'profil.html', {'infos': infos, 'alertes': alertes})
+    return render(request, 'profil.html', {
+        'infos': infos, 
+        'abonnements': abonnements,
+        'alertes': alertes
+    })
