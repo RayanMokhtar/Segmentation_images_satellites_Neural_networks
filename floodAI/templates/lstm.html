@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Prédiction LSTM - FireFloodAI{% endblock %}
+
+{% block extra_head %}
+<!-- Styles déjà inclus dans style.css -->
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12 text-center">
+            <h1 class="mb-4">Prédiction d'inondations par LSTM</h1>
+            <p>Utilisez notre modèle LSTM pour prédire les risques d'inondation en fonction de la date et des coordonnées géographiques.</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="model-selection">
+                <div class="model-option {% if model_type == 'LSTM standard' or not model_type %}active{% endif %}" data-model="LSTM standard">
+                    LSTM sans label CNN
+                </div>
+                <div class="model-option {% if model_type == 'LSTM avec CNN' %}active{% endif %}" data-model="LSTM avec CNN">
+                    LSTM avec label CNN
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="prediction-container">
+        {% if prediction_done %}
+        <div class="prediction-result">
+            <div class="prediction-circle {{ color }}">
+                <div class="progress-animation"></div>
+                <span>{{ prediction_value }}%</span>
+            </div>
+            <h3>Risque {{ risk_level }}</h3>
+            <div class="prediction-details">
+                <h4>Détails de la prédiction</h4>
+                <div class="detail-item">
+                    <span>Date :</span>
+                    <span>{{ date_prediction }}</span>
+                </div>
+                <div class="detail-item">
+                    <span>Latitude :</span>
+                    <span>{{ latitude }}</span>
+                </div>
+                <div class="detail-item">
+                    <span>Longitude :</span>
+                    <span>{{ longitude }}</span>
+                </div>
+                <div class="detail-item">
+                    <span>Modèle utilisé :</span>
+                    <span>{{ model_type }}</span>
+                </div>
+            </div>
+            <a href="{% url 'lstm' %}" class="btn btn-primary mt-4">Nouvelle prédiction</a>
+        </div>
+        {% endif %}
+        
+        <div class="prediction-form {% if prediction_done %}d-none d-lg-block{% endif %}">
+            <div class="form-container">
+                <h3 class="mb-4">Entrez les paramètres de prédiction</h3>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="model_type" id="model-type-input" value="{{ model_type|default:'LSTM standard' }}">
+                    
+                    <div class="mb-3">
+                        <label for="date_prediction" class="form-label">Date de prédiction</label>
+                        <input type="date" class="form-control" id="date_prediction" name="date_prediction" value="{{ request.POST.date_prediction }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="latitude" class="form-label">Latitude</label>
+                        <input type="number" class="form-control" id="latitude" name="latitude" placeholder="Ex: 48.8566" step="0.000001" min="-90" max="90" value="{{ request.POST.latitude }}" required>
+                        <small class="form-text text-muted">Entre -90 et 90</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="longitude" class="form-label">Longitude</label>
+                        <input type="number" class="form-control" id="longitude" name="longitude" placeholder="Ex: 2.3522" step="0.000001" min="-180" max="180" value="{{ request.POST.longitude }}" required>
+                        <small class="form-text text-muted">Entre -180 et 180</small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary generate-btn">Générer la prédiction</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion de la sélection du modèle
+        const modelOptions = document.querySelectorAll('.model-option');
+        const modelTypeInput = document.getElementById('model-type-input');
+        
+        modelOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // Mise à jour visuelle
+                modelOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Mise à jour de la valeur du formulaire
+                const modelType = this.getAttribute('data-model');
+                if (modelTypeInput) {
+                    modelTypeInput.value = modelType;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
