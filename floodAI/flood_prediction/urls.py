@@ -12,4 +12,6 @@ urlpatterns = [
     path('api/subscribe-city/', views.subscribe_city, name='subscribe_city'),
     path('api/check-subscription/', views.check_subscription_status, name='check_subscription_status'),
     path('unsubscribe-city/<int:abonnement_id>/', views.unsubscribe_city, name='unsubscribe_city'),
+    path('segmentation/', views.segmentation, name='segmentation'),
+    path('lstm/', views.lstm, name='lstm'),
 ]

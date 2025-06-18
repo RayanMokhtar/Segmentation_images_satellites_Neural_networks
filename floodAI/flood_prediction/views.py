@@ -254,3 +254,11 @@ def profil(request):
         'abonnements': abonnements,
         'alertes': alertes
     })
+
+# Vue pour la page de segmentation d'images
+def segmentation(request):
+    return render(request, 'home.html', {'page': 'segmentation'})
+
+# Vue pour la page de prédiction LSTM
+def lstm(request):
+    return render(request, 'home.html', {'page': 'lstm'})

@@ -30,50 +30,92 @@ body {
     gap: 8px;
 }
 
-.logo-icon {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
+/* Styles pour le logo */
+.logo-image {
+    height: 30px;
+    width: auto;
 }
 
-.logo-icon i {
-    font-size: 1.3rem;
-    transition: transform 0.3s ease;
+.logo-text {
+    font-weight: bold;
 }
 
-.logo-icon i.fa-fire {
-    color: #ff4d4d !important;
+.fire-text {
+    color: #ff4d4d;
 }
 
-.logo-icon i.fa-water {
-    color: #4d94ff !important;
+.flood-text {
+    color: #4d94ff;
 }
 
-.navbar-brand:hover .logo-icon i.fa-fire {
-    transform: translateY(-2px);
-}
-
-.navbar-brand:hover .logo-icon i.fa-water {
-    transform: translateY(2px);
-}
-
-.waves-icon {
-    font-size: 24px;
+.ai-text {
     color: #1a73e8;
+}
+
+/* Styles pour les liens de navigation centrés */
+.navbar-nav {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    gap: 2rem;
 }
 
 .nav-link {
     color: var(--text-secondary);
     font-weight: 500;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0;
+    position: relative;
+    transition: color 0.3s ease;
 }
 
 .nav-link.active {
     color: var(--primary-color);
 }
 
+/* Effet de soulignement pour le lien actif */
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-color);
+    transform: scaleX(1);
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-color);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
 .nav-link:hover {
-    color: #1a73e8;
+    color: var(--primary-color);
+}
+
+.nav-link:hover::after {
+    transform: scaleX(0.8);
+}
+
+/* Style pour le conteneur central de la navbar */
+.navbar-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.navbar-center {
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
 }
 
 .sidebar {

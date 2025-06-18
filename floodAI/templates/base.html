@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FireFloodAI{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="{% static 'images/ia.png' %}" type="image/png">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid px-4">
+            <div class="navbar-container">
+                <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+                    <img src="{% static 'images/logopds.png' %}" alt="Logo" class="logo-image">
+                    <span class="logo-text">
+                        <span class="fire-text">Fire</span><span class="flood-text">Flood</span><span class="ai-text">AI</span>
+                    </span>
+                </a>
+                <div class="navbar-center">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Accueil</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'segmentation' in request.path %}active{% endif %}" href="/segmentation">Segmentation d'images</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'lstm' in request.path %}active{% endif %}" href="/lstm">Prédiction LSTM</a>
+                        </li>
+                    </ul>
+                </div>
+                {% if user.is_authenticated %}
+                <div class="d-flex align-items-center gap-2">
+                    <span class="profile-icon"><i class="fas fa-user-circle"></i></span>
+                    <a href="{% url 'profil' %}" class="profile-name text-decoration-none">{{ user.first_name|default:user.username }}</a>
+                    <a href="{% url 'logout' %}" class="btn btn-outline-secondary btn-sm ms-2">Déconnexion</a>
+                </div>
+                {% else %}
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{% url 'login' %}" class="btn btn-login">Connexion</a>
+                    <a href="{% url 'register' %}" class="btn btn-outline-primary">S'inscrire</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
