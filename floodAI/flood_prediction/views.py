@@ -240,8 +240,98 @@ def profil(request):
 
 # Vue pour la page de segmentation d'images
 def segmentation(request):
-    return render(request, 'home.html', {'page': 'segmentation'})
+    context = {
+        'model_type': request.POST.get('model_type', 'CNN')
+    }
+    
+    if request.method == 'POST' and request.FILES.get('image'):
+        uploaded_image = request.FILES['image']
+        
+        # Sauvegarde temporaire de l'image
+        import os
+        from django.conf import settings
+        import tempfile
+        
+        # Créer un dossier pour les images temporaires s'il n'existe pas
+        temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_images')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Sauvegarder l'image temporaire
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg', dir=temp_dir) as temp_file:
+            for chunk in uploaded_image.chunks():
+                temp_file.write(chunk)
+            temp_image_path = temp_file.name
+        
+        # Chemins relatifs pour les templates
+        relative_path = os.path.relpath(temp_image_path, settings.MEDIA_ROOT)
+        original_image_url = os.path.join(settings.MEDIA_URL, relative_path)
+        
+        # Ici, vous pourriez appeler votre modèle de segmentation (CNN ou U-Net)
+        # Pour l'instant, nous allons simplement simuler un résultat
+        # Dans une implémentation réelle, vous appelleriez votre modèle ici
+        
+        # Simulation d'une image résultante (même image pour le moment)
+        segmented_image_url = original_image_url
+        
+        context.update({
+            'original_image': original_image_url,
+            'segmented_image': segmented_image_url,
+            'prediction_done': True
+        })
+    
+    return render(request, 'segmentation.html', context)
 
 # Vue pour la page de prédiction LSTM
 def lstm(request):
-    return render(request, 'home.html', {'page': 'lstm'})
+    import random
+    from datetime import datetime
+    
+    context = {
+        'model_type': request.POST.get('model_type', 'LSTM standard')
+    }
+    
+    if request.method == 'POST':
+        # Récupération des données du formulaire
+        date_prediction = request.POST.get('date_prediction', '')
+        latitude = request.POST.get('latitude', '')
+        longitude = request.POST.get('longitude', '')
+        model_type = request.POST.get('model_type', 'LSTM standard')
+        
+        # Validation basique
+        if date_prediction and latitude and longitude:
+            # Génération d'un résultat de prédiction aléatoire (0-100%)
+            prediction_value = random.randint(0, 100)
+            
+            # Déterminer la couleur du résultat et le message
+            if prediction_value > 50:
+                risk_level = "élevé"
+                color = "red"
+            elif prediction_value == 50:
+                risk_level = "modéré"
+                color = "yellow"
+            else:
+                risk_level = "faible"
+                color = "green"
+                
+            # Formatage de la date pour l'affichage
+            try:
+                # Essayer de parser la date au format YYYY-MM-DD
+                date_obj = datetime.strptime(date_prediction, '%Y-%m-%d')
+                formatted_date = date_obj.strftime('%d/%m/%Y')
+            except ValueError:
+                # Si erreur, utiliser la valeur telle quelle
+                formatted_date = date_prediction
+                
+            # Construction du contexte pour le template
+            context.update({
+                'prediction_done': True,
+                'prediction_value': prediction_value,
+                'risk_level': risk_level,
+                'color': color,
+                'date_prediction': formatted_date,
+                'latitude': latitude,
+                'longitude': longitude,
+                'model_type': model_type
+            })
+    
+    return render(request, 'lstm.html', context)
