@@ -1,3 +1,4 @@
 from django.test import TestCase
 
-# Create your tests here.
+# Fichier réservé aux tests unitaires.
+# Vous pouvez ajouter des tests pour les modèles, les vues et autres fonctionnalités ici.

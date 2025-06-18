@@ -2,17 +2,6 @@
 let map = null;
 let selectedMarker = null;
 
-// URL de l'API OpenMeteo
-const WEATHER_API_URL = 'https://api.open-meteo.com/v1';
-
-// URL de l'API Nominatim pour la géocodage inverse
-const NOMINATIM_API_URL = 'https://nominatim.openstreetmap.org/reverse';
-
-// Fonction pour convertir m/s en km/h
-function msToKmh(ms) {
-    return (ms * 3.6).toFixed(1);
-}
-
 // Fonction pour formater la date en français
 function formatDate(date) {
     const options = { weekday: 'long', day: 'numeric', month: 'long' };
@@ -424,7 +413,7 @@ function getCsrfToken() {
 
 // Fonction pour afficher une notification
 function showNotification(message, type) {
-    const notificationArea = document.getElementById('notification-area') || createNotificationArea();
+    const notificationArea = document.getElementById('notifications-container') || createNotificationArea();
     
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -450,8 +439,8 @@ function showNotification(message, type) {
 // Fonction pour créer la zone de notification si elle n'existe pas
 function createNotificationArea() {
     const area = document.createElement('div');
-    area.id = 'notification-area';
-    area.className = 'notification-area';
+    area.id = 'notifications-container';
+    area.className = 'notifications-container';
     document.body.appendChild(area);
     return area;
 }

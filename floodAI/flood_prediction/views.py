@@ -39,25 +39,8 @@ def home(request):
         'default_location': {
             'lat': 46.603354,
             'lng': 1.888334
-        }
-    }
+        }    }
     return render(request, 'home.html', context)
-
-# Vue pour gérer les abonnements aux régions
-
-# Vue pour s'abonner à une région (fonction simplifiée)
-@login_required
-def subscribe_region(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            region_name = data.get('region_name', 'Région inconnue')
-            
-            # Fonctionnalité simplifiée - juste retourner un message de succès
-            return JsonResponse({'success': True, 'message': f'Abonnement à la région {region_name} enregistré'})
-                
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Méthode non autorisée'})
 
