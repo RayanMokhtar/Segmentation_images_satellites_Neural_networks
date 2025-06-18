@@ -14,4 +14,5 @@ urlpatterns = [
     path('unsubscribe-city/<int:abonnement_id>/', views.unsubscribe_city, name='unsubscribe_city'),
     path('segmentation/', views.segmentation, name='segmentation'),
     path('lstm/', views.lstm, name='lstm'),
+    path('send-prediction-email/', views.send_prediction_email, name='send_prediction_email'),
 ]

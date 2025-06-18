@@ -1,0 +1,20 @@
+# Ignorer les fichiers de variables d'environnement
+.env
+.env.*
+
+# Ignorer les fichiers système
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+db.sqlite3
+
+# Ignorer les fichiers média et statiques générés
+/media/
+/static_root/
+
+# Ignorer les logs et fichiers temporaires
+*.log
+temp/
+tmp/

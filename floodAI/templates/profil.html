@@ -137,7 +137,28 @@
         .no-abonnement {
             font-style: italic;
             color: #5f6368;
-        }    </style>
+        }
+        .btn-predire {
+            background: #34A853;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            padding: 8px 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .btn-predire:hover {
+            background: #2D9348;
+            color: white;
+            text-decoration: none;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -151,6 +172,9 @@
             <div class="profile-info-row"><span class="profile-info-label">Nom :</span><span class="profile-info-value">{{ infos.nom }}</span></div>
             <div class="profile-info-row"><span class="profile-info-label">Prénom :</span><span class="profile-info-value">{{ infos.prenom }}</span></div>
             <div class="profile-info-row"><span class="profile-info-label">Email :</span><span class="profile-info-value">{{ infos.mail }}</span></div>
+            <div class="text-center mt-3">
+                <a href="{% url 'send_prediction_email' %}" class="btn-predire"><i class="fas fa-envelope mr-2"></i> Recevoir une prédiction par email</a>
+            </div>
         </div>
         
         <!-- Ajout de la section Abonnements -->

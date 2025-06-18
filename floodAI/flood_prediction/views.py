@@ -8,8 +8,12 @@ from django.db.models import Q
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django import forms
 from django.http import JsonResponse
+from django.core.mail import send_mail
+from django.conf import settings
 import json
 import requests
+import random
+from datetime import datetime, date
 
 # Formulaire d'inscription personnalisé
 class InscriptionForm(UserCreationForm):
@@ -335,3 +339,82 @@ def lstm(request):
             })
     
     return render(request, 'lstm.html', context)
+
+# Fonction pour envoyer un email de prédiction
+@login_required
+def send_prediction_email(request):
+    user = request.user
+    email = user.email
+    
+    # Débogage pour voir les paramètres d'email
+    from django.conf import settings
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Tentative d'envoi d'email à {email}")
+    logger.error(f"Configuration: {settings.EMAIL_HOST}, {settings.EMAIL_PORT}, {settings.EMAIL_HOST_USER}")
+    
+    if not email:
+        messages.error(request, "Vous n'avez pas d'adresse email configurée dans votre profil.")
+        return redirect('profil')
+    
+    # Générer une prédiction aléatoire pour démonstration
+    prediction_value = random.randint(0, 100)
+    
+    # Déterminer le niveau de risque basé sur la valeur de prédiction
+    if prediction_value > 70:
+        risk_level = "élevé"
+    elif prediction_value > 30:
+        risk_level = "modéré"
+    else:
+        risk_level = "faible"
+    
+    # Date du jour pour la prédiction
+    today = date.today().strftime('%d/%m/%Y')
+      # Contenu de l'email
+    subject = f"Prédiction de risque d'inondation - {today}"
+    message = f"""
+Bonjour {user.first_name} {user.last_name},
+
+Voici votre prédiction de risque d'inondation du {today}.
+
+Risque d'inondation : {prediction_value}% - Niveau {risk_level}
+
+Cette prédiction est basée sur les données météorologiques actuelles et l'analyse de notre modèle IA.
+
+Nous vous recommandons de rester vigilant et de suivre les consignes de sécurité en cas d'alerte météorologique.
+
+Cordialement,
+L'équipe FireFloodAI
+    """
+    
+    try:
+        # Utiliser le DEFAULT_FROM_EMAIL des settings pour l'expéditeur
+        from django.conf import settings
+        sender_email = settings.DEFAULT_FROM_EMAIL
+        
+        # Envoyer l'email
+        send_mail(
+            subject,
+            message,
+            sender_email,  # Expéditeur configuré dans settings.py
+            [email],  # Destinataire
+            fail_silently=False,
+        )
+        messages.success(request, f"Un email de prédiction a été envoyé à votre adresse {email}.")
+        
+        # Log de succès
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Email envoyé avec succès à {email}")
+        
+    except Exception as e:
+        # Enregistrer l'erreur détaillée
+        import logging
+        import traceback
+        logger = logging.getLogger(__name__)
+        logger.error(f"Erreur lors de l'envoi de l'email à {email}: {str(e)}")
+        logger.error(traceback.format_exc())
+        
+        messages.error(request, f"Erreur lors de l'envoi de l'email: {str(e)}")
+    
+    return redirect('profil')

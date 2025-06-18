@@ -13,6 +13,19 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 
+# Fonction simple pour charger les variables d'environnement
+def get_env_variable(var_name, default=None):
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')) as f:
+            for line in f:
+                if line.strip() and not line.strip().startswith('#'):
+                    key, value = line.strip().split('=', 1)
+                    if key.strip() == var_name:
+                        return value.strip()
+        return default
+    except (FileNotFoundError, ValueError):
+        return default
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -21,10 +34,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2j00^+orq%p(qi6eywek4&96e$qru809$r2bij&$l^&+_ej)kt'
+SECRET_KEY = get_env_variable('SECRET_KEY', 'default-insecure-key-replace-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = get_env_variable('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = []
 
@@ -80,7 +93,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'museevasion_fireflood',
         'USER': 'museevasion',
-        'PASSWORD': 'Dellpower0+',
+        'PASSWORD': get_env_variable('DB_PASSWORD', ''),
         'HOST': 'postgresql-museevasion.alwaysdata.net',
         'PORT': '5432',
     }
@@ -141,3 +154,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/profile/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Email configuration
+# Pour utiliser Gmail comme service d'envoi d'emails
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'firefloodai@gmail.com'
+EMAIL_HOST_PASSWORD = get_env_variable('EMAIL_PASSWORD', '')  # Mot de passe d'application
+DEFAULT_FROM_EMAIL = 'firefloodai@gmail.com'  # L'adresse qui apparaîtra comme expéditeur
+
+# Pour le développement - pour afficher les emails dans la console au lieu de les envoyer
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
