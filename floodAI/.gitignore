@@ -11,8 +11,9 @@ __pycache__/
 db.sqlite3
 
 # Ignorer les fichiers média et statiques générés
-/media/
-/static_root/
+media/
+media/**/*
+static_root/
 
 # Ignorer les logs et fichiers temporaires
 *.log
