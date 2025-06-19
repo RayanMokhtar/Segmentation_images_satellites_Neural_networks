@@ -18,4 +18,6 @@ urlpatterns = [
     path('segmentation/', views.segmentation, name='segmentation'),
     path('lstm/', views.lstm, name='lstm'),
     path('send-city-alert/', views.send_city_alert, name='send_city_alert'),
+    path('api/get-cnn-prediction/', views.get_cnn_prediction, name='get_cnn_prediction'),
+
 ]

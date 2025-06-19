@@ -4,6 +4,7 @@
 {% block title %}Prévisions des inondations{% endblock %}
 
 {% block extra_head %}
+{% csrf_token %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.css">
 {% endblock %}
@@ -16,11 +17,25 @@
                 <div class="sidebar">
                     <!-- Zone pour les informations de région sélectionnée -->
                     <div id="region-info" class="mb-4"></div>
-                      <h1 class="prediction-title">Prévisions inondations / incendies</h1>                    <div id="user-guidance" class="user-guidance mb-3">
+                    <h1 class="prediction-title">Prévisions inondations / incendies</h1>                    
+                    <div id="user-guidance" class="user-guidance mb-3">
                         <p><i class="fas fa-info-circle"></i> Veuillez choisir une ville sur la carte pour voir les prévisions.</p>
                     </div>
+                    
+                    <!-- Bouton de prédiction -->
+                    <div id="prediction-button-container" class="mb-3 text-center" style="display: none;">
+                        <button id="predict-button" class="btn btn-primary">
+                            <i class="fas fa-chart-line"></i> Prédire les risques
+                        </button>
+                    </div>
+                    
+                    <!-- Indicateur de chargement pour les prédictions -->
+                    <div id="prediction-loading" class="text-center mb-3" style="display: none;">
+                        <span class="spinner"></span> Calcul des prédictions en cours...
+                    </div>
+                    
                     <div class="risk-levels">
-                        <!-- Les données météo seront insérées dynamiquement ici par le JavaScript -->
+                        <!-- Les prédictions seront insérées dynamiquement ici par le JavaScript -->
                     </div>
                 </div>
             </div>

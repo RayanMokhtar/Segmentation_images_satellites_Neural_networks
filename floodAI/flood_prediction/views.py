@@ -13,7 +13,10 @@ from django.conf import settings
 import json
 import requests
 import random
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from .fake_prediction import predict_flood
+import base64
+import os
 
 # Formulaire d'inscription personnalisé
 class InscriptionForm(UserCreationForm):
@@ -658,3 +661,58 @@ def reset_password(request, token):
     except PasswordResetToken.DoesNotExist:
         messages.error(request, 'Lien de réinitialisation invalide.')
         return redirect('forgot_password')
+
+
+def get_cnn_prediction(request):
+    if request.method == 'POST':
+        try:
+            # Récupérer et parser les données d'entrée
+            input_data = json.loads(request.POST.get('input_data', '{}'))
+            
+            lat = input_data.get('latitude')
+            lng = input_data.get('longitude')
+           
+            date_du_jour = datetime.now()
+            date_debut = date_du_jour - timedelta(days=10)
+            if not all([lat, lng, date_du_jour, date_debut]):
+                return JsonResponse({'error': 'Données manquantes'}, status=400)
+            
+            
+            prediction_result = predict_flood(
+                longitude=float(lng),
+                latitude=float(lat),
+                size_km=5,  # Rayon de 5 km
+                start_date=date_debut.strftime('%Y-%m-%d'),
+                end_date=date_du_jour.strftime('%Y-%m-%d')
+            )
+            # Encoder les images en base64 si elles existent
+            if prediction_result.get('success') and 'files' in prediction_result:
+                # Récupérer les chemins des fichiers
+                visualization_path = prediction_result['files'].get('output_visualization')
+                input_image_path = prediction_result['files'].get('input_image')
+                
+                prediction_result['visualizations'] = {}
+                
+                # Encoder l'image de visualisation
+                if visualization_path and os.path.exists(visualization_path):
+                    with open(visualization_path, "rb") as image_file:
+                        encoded_visualization = base64.b64encode(image_file.read()).decode('utf-8')
+                        prediction_result['visualizations']['output_image'] = f"data:image/png;base64,{encoded_visualization}"
+                
+                # Encoder l'image satellitaire d'entrée
+                if input_image_path and os.path.exists(input_image_path):
+                    with open(input_image_path, "rb") as image_file:
+                        encoded_input = base64.b64encode(image_file.read()).decode('utf-8')
+                        prediction_result['visualizations']['input_image'] = f"data:image/tiff;base64,{encoded_input}"
+
+            print(f"Résultat de la prédiction: {prediction_result['prediction']}")
+            
+            # Retourner la prédiction
+            return JsonResponse({'prediction': prediction_result})
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Format de données invalide'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error générale lors de la prédiction cnn ': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)

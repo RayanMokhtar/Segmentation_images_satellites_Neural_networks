@@ -1,0 +1,70 @@
+{
+    "request": {
+        "headers": {
+            "accept": "image/tiff",
+            "content-type": "application/json"
+        },
+        "payload": {
+            "evalscript": "\n        //VERSION=3\n        function setup() {\n            return {\n                input: [{\n                    bands: [\"VV\", \"VH\"]\n                }],\n                output: {\n                    bands: 2,\n                    sampleType: \"FLOAT32\"\n                }\n            };\n        }\n        \n        function evaluatePixel(sample) {\n            let result = [];\n            \n            let VV_filtered = applySpeckleFilter(sample.VV);\n            \n            let VV_db = VV_filtered > 0 ? 10 * Math.log10(VV_filtered) : -30;\n            result.push(VV_db);\n            \n            let VH_filtered = applySpeckleFilter(sample.VH);\n            \n            let VH_db = VH_filtered > 0 ? 10 * Math.log10(VH_filtered) : -30;\n            result.push(VH_db);\n            \n            return result;\n        }\n        \n        // Filtre speckle simple (moyenne 3x3)\n        function applySpeckleFilter(value) {\n            // Simulation d'un filtre simple\n            return value;\n        }\n        ",
+            "input": {
+                "bounds": {
+                    "bbox": [
+                        1.3,
+                        43.5,
+                        1.6,
+                        43.7
+                    ],
+                    "properties": {
+                        "crs": "http://www.opengis.net/def/crs/EPSG/0/4326"
+                    }
+                },
+                "data": [
+                    {
+                        "dataFilter": {
+                            "acquisitionMode": "IW",
+                            "mosaickingOrder": "mostRecent",
+                            "polarization": "DV",
+                            "resolution": "HIGH",
+                            "timeRange": {
+                                "from": "2023-06-01T00:00:00Z",
+                                "to": "2023-06-15T23:59:59Z"
+                            }
+                        },
+                        "orbitDirection": "DESCENDING",
+                        "type": "sentinel-1-grd"
+                    }
+                ]
+            },
+            "output": {
+                "height": 1088,
+                "responses": [
+                    {
+                        "format": {
+                            "type": "image/tiff"
+                        },
+                        "identifier": "default"
+                    }
+                ],
+                "width": 1231
+            }
+        },
+        "timestamp": "2025-06-08T15:22:05.194148",
+        "url": "https://services.sentinel-hub.com/api/v1/process"
+    },
+    "response": {
+        "elapsed": 1.778144,
+        "headers": {
+            "Connection": "keep-alive",
+            "Content-Type": "image/tiff",
+            "Date": "Sun, 08 Jun 2025 13:22:04 GMT",
+            "Transfer-Encoding": "chunked",
+            "access-control-allow-credentials": "true",
+            "access-control-allow-headers": "origin,content-type,accept,accept-crs,authorization,cache-control",
+            "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH",
+            "access-control-allow-origin": "*",
+            "access-control-max-age": "3600",
+            "x-processingunits-spent": "6.812174682185287"
+        },
+        "status_code": 200
+    }
+}

@@ -1,0 +1,24 @@
+{
+  "bbox": [
+    1.3,
+    43.5,
+    1.6,
+    43.7
+  ],
+  "start_date": "2023-05-14",
+  "end_date": "2023-05-26",
+  "orbit_direction": "DESCENDING",
+  "polarization": "VV",
+  "resolution": 20,
+  "acquisition_time": "2025-06-08T15:22:11.565531",
+  "data_source": "Sentinel-1",
+  "processing_level": "GRD",
+  "min": 0.00010139846563106403,
+  "max": 1903.01123046875,
+  "mean": 0.2882544994354248,
+  "std": 3.868853807449341,
+  "shape": [
+    1088,
+    1231
+  ]
+}

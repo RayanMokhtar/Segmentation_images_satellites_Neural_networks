@@ -20,6 +20,39 @@ async function fetchWeatherData(lat, lng) {
     }
 }
 
+async function fetchCnnPredictions(lat, lng, date) {
+    try {
+        // Préparer les données pour l'envoi
+        const formData = new FormData();
+        formData.append('input_data', JSON.stringify({
+            latitude: lat,
+            longitude: lng,
+        }));
+
+        // Récupérer le token CSRF
+        const csrfToken = getCsrfToken();
+
+        // Envoyer la requête au backend
+        const response = await fetch('/api/get-cnn-prediction/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+        const data = await response.json(); 
+        console.log('Prédictions CNN récupérées:', data);
+        return data;
+        
+    } catch (error) {
+        console.error('Erreur lors de la récupération des prédictions CNN:', error);
+        return null;
+    }
+}
 // Fonction pour récupérer les informations de lieu via la vue Django
 async function fetchLocationInfo(lat, lng) {
     try {
@@ -91,7 +124,7 @@ function initMap() {
 
     // Gestionnaire d'événements pour le clic sur la carte
     map.on('click', function(e) {
-        createMarker(e.latlng.lat, e.latlng.lng);
+        selectLocation(e.latlng.lat, e.latlng.lng);
     });
 
     // Localiser l'utilisateur au chargement
@@ -103,11 +136,122 @@ function initMap() {
             // Centrer la carte sur la position de l'utilisateur
             map.setView([lat, lng], 13);
             
-            // Créer le marqueur à la position de l'utilisateur
-            createMarker(lat, lng);
+            // Sélectionner la position de l'utilisateur
+            selectLocation(lat, lng);
         }, function(error) {
             console.log("Erreur de géolocalisation:", error);
         });
+    }
+    
+    // Ajouter l'événement click au bouton de prédiction
+    document.getElementById('predict-button').addEventListener('click', ()=> {
+        console.log("Bouton de prédiction cliqué");
+        predictRisks();
+    });
+}
+
+
+async function selectLocation(lat, lng) {
+    // Supprime l'ancien marqueur s'il existe
+    if (selectedMarker) {
+        map.removeLayer(selectedMarker);
+    }
+
+    // Masquer le message de guidance utilisateur quand une région est cliquée
+    const userGuidance = document.getElementById('user-guidance');
+    if (userGuidance) {
+        userGuidance.style.display = 'none';
+    }
+
+    // Crée un nouveau marqueur avec une icône PNG
+    selectedMarker = L.marker([lat, lng], {
+        icon: L.divIcon({
+            className: 'location-marker',
+            html: '<img src="/static/images/location-marker.png" alt="Location marker">',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32]
+        })
+    }).addTo(map);
+    
+    // Stocker les coordonnées sélectionnées
+    selectedLocation = { lat, lng };
+
+    // Créer ou récupérer le conteneur pour les infos de localisation et afficher un indicateur de chargement
+    let locationInfoDiv = document.getElementById('location-info');
+    if (!locationInfoDiv) {
+        const sidebar = document.querySelector('.sidebar');
+        locationInfoDiv = document.createElement('div');
+        locationInfoDiv.id = 'location-info';
+        sidebar.insertBefore(locationInfoDiv, sidebar.firstChild);
+    }
+    
+    locationInfoDiv.innerHTML = `
+        <div class="location-header">
+            <h3>Lieu sélectionné</h3>
+            <div class="loading-location">
+                <span class="spinner"></span> Recherche de la localité...
+            </div>
+        </div>
+    `;
+
+    // Effacer les anciennes prédictions
+    document.querySelector('.risk-levels').innerHTML = '';
+    
+    // Afficher le bouton de prédiction
+    document.getElementById('prediction-button-container').style.display = 'block';
+    
+    // Récupérer les informations de localisation via Nominatim
+    fetchLocationInfo(lat, lng)
+        .then(locationInfo => {
+            if (locationInfo) {
+                updateLocationInfo(locationInfo);
+            }
+        })
+        .catch(error => {
+            console.error("Erreur lors de la récupération des données de localisation:", error);
+            // Afficher un message simple en cas d'échec
+            locationInfoDiv.innerHTML = `
+                <div class="location-header">
+                    <h3>Lieu sélectionné</h3>
+                    <div class="location-name">Coordonnées: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+                </div>
+            `;
+        });
+}
+
+
+async function predictRisks() {
+    if (!selectedLocation) {
+        showNotification('Veuillez d\'abord sélectionner un lieu sur la carte.', 'error');
+        return;
+    }
+    
+    // Cacher le bouton de prédiction pendant le chargement
+    document.getElementById('prediction-button-container').style.display = 'none';
+    
+    // Afficher l'indicateur de chargement
+    document.getElementById('prediction-loading').style.display = 'block';
+    
+    try {
+        // Récupérer les données météo pour cette localisation
+        const weatherData = await fetchWeatherData(selectedLocation.lat, selectedLocation.lng);
+        
+        if (!weatherData) {
+            throw new Error('Impossible de récupérer les données météo');
+        }
+        
+        // Effectuer les prédictions
+        await updatePredictions(selectedLocation.lat, selectedLocation.lng, weatherData);
+        
+    } catch (error) {
+        console.error('Erreur lors de la prédiction des risques:', error);
+        showNotification('Une erreur est survenue lors du calcul des prédictions.', 'error');
+    } finally {
+        // Cacher l'indicateur de chargement
+        document.getElementById('prediction-loading').style.display = 'none';
+        
+        // Réafficher le bouton de prédiction
+        document.getElementById('prediction-button-container').style.display = 'block';
     }
 }
 
@@ -359,6 +503,118 @@ async function updateLocationInfo(locationData) {
     locationInfoDiv.innerHTML = locationHtml;
 }
 
+
+
+async function updatePredictions(lat, lng, weatherData) {
+    const riskLevels = document.querySelector('.risk-levels');
+    riskLevels.innerHTML = '';
+
+    const hourlyData = weatherData.hourly;
+    const now = new Date();
+    const currentHour = now.getHours();
+    const forecasts = [];
+
+    // Créer 4 prévisions (aujourd'hui et 3 jours suivants)
+    for (let i = 0; i < 4; i++) {
+        const date = new Date(now);
+        date.setDate(date.getDate() + i);
+        
+        // Utiliser la même heure pour chaque jour
+        const hourIndex = i * 24 + currentHour;
+        
+        forecasts.push({
+            date: date,
+            temp: hourlyData.temperature_2m[hourIndex],
+            precip: hourlyData.precipitation[hourIndex],
+            humidity: hourlyData.relative_humidity_2m[hourIndex],
+            windSpeed: hourlyData.wind_speed_10m[hourIndex]
+        });
+    }
+
+    // Pour chaque jour de prévision, récupérer la prédiction CNN
+    for (const forecast of forecasts) {
+        try {
+            const cnnPrediction = await fetchCnnPredictions(lat, lng, forecast.date);
+            console.log('CNN Prediction complète:', cnnPrediction);
+            
+            if (cnnPrediction && cnnPrediction.prediction) {
+                // Utilisez directement l'objet de prédiction
+                const prediction = cnnPrediction.prediction['prediction'];
+                console.log('Objet prediction:', prediction);
+                
+                // Déterminer la classe de risque basée sur la prédiction
+                let riskClass = 'low';
+                let riskLevel = prediction.risk_level || 'faible';
+                
+                if (riskLevel === 'Élevé' || riskLevel === 'high') {
+                    riskClass = 'high';
+                    riskLevel = 'Élevé';
+                } else if (riskLevel === 'Modéré' || riskLevel === 'medium') {
+                    riskClass = 'medium';
+                    riskLevel = 'Modéré';
+                } else {
+                    riskClass = 'low';
+                    riskLevel = 'Faible';
+                }
+                
+                // Récupérer les valeurs avec valeurs par défaut
+                const probability = prediction.probability || prediction.flood_percentage || 0;
+
+                const predHtml = `
+                    <div class="risk-item ${riskClass}">
+                        <div class="risk-date">${formatDate(forecast.date)}</div>
+                        <div class="risk-info">
+                            <div class="risk-level">Risque d'inondation : ${riskLevel}</div>
+                            <div class="weather-info">
+                                <div>Température : ${forecast.temp.toFixed(1)}°C</div>
+                                <div>Précipitations : ${forecast.precip.toFixed(1)}mm</div>
+                                <div>Probabilité d'inondation : ${probability}%</div>
+                            </div>
+                            <div class="prediction-details">
+                                ${prediction.message || ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                riskLevels.innerHTML += predHtml;
+            } else {
+                // Fallback au comportement original si pas de prédiction CNN
+                let riskLevel = 'Faible';
+                if (forecast.precip > 50 || forecast.humidity > 80) {
+                    riskLevel = 'Élevé';
+                } else if (forecast.precip > 25 || forecast.humidity > 60) {
+                    riskLevel = 'Moyen';
+                }
+
+                const riskClass = riskLevel.toLowerCase() === 'élevé' ? 'high' : 
+                                riskLevel.toLowerCase() === 'moyen' ? 'medium' : 'low';
+
+                const predHtml = `
+                    <div class="risk-item ${riskClass}">
+                        <div class="risk-date">${formatDate(forecast.date)}</div>
+                        <div class="risk-info">
+                            <div class="risk-level">Risque d'inondation : ${riskLevel}</div>
+                            <div class="weather-info">
+                                <div>Température : ${forecast.temp.toFixed(1)}°C</div>
+                                <div>Précipitations : ${forecast.precip.toFixed(1)}mm</div>
+                                <div>Humidité : ${forecast.humidity}%</div>
+                                <div>Vent : ${forecast.windSpeed.toFixed(1)} km/h</div>
+                            </div>
+                            <div class="prediction-note">
+                                (Prédiction basée sur les données météo simples)
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                riskLevels.innerHTML += predHtml;
+            }
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour des prédictions:', error);
+        }
+    }
+}
+
 // Fonction pour basculer l'état de l'abonnement (s'abonner ou se désabonner)
 async function toggleCitySubscription(cityName, action) {
     if (!selectedMarker) return;
@@ -455,3 +711,6 @@ function createNotificationArea() {
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
 });
+
+
+
