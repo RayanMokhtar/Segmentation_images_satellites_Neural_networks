@@ -1,0 +1,33 @@
+# Ignorer les fichiers de variables d'environnement
+.env
+.env.*
+
+flood_dataset/SEN12FLOOD/
+FireDataset/raw_data/
+*.tif
+*.tiff
+*.h5
+*.hdf5
+resultats_image/
+sentinelhub_data/
+sortie/
+sentinel_data/
+templatetags/
+sar_images/
+# Ignorer les fichiers système
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+db.sqlite3
+
+# Ignorer les fichiers média et statiques générés
+media/
+media/**/*
+static_root/
+
+# Ignorer les logs et fichiers temporaires
+*.log
+temp/
+tmp/
