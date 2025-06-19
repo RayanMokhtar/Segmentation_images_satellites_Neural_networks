@@ -118,6 +118,12 @@ async function createMarker(lat, lng) {
         map.removeLayer(selectedMarker);
     }
 
+    // Masquer le message de guidance utilisateur quand une région est cliquée
+    const userGuidance = document.getElementById('user-guidance');
+    if (userGuidance) {
+        userGuidance.style.display = 'none';
+    }
+
     // Crée un nouveau marqueur avec une icône PNG
     selectedMarker = L.marker([lat, lng], {
         icon: L.divIcon({
