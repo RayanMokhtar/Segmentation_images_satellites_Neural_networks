@@ -307,36 +307,95 @@ def segmentation(request):
     if request.method == 'POST' and request.FILES.get('image'):
         uploaded_image = request.FILES['image']
         
-        # Sauvegarde temporaire de l'image
+        # Imports nécessaires
         import os
         from django.conf import settings
         import tempfile
+        from PIL import Image
+        import uuid
+        
+        # Vérifier l'extension de fichier
+        file_extension = os.path.splitext(uploaded_image.name)[1].lower()
+        is_tif = file_extension in ['.tif', '.tiff']
         
         # Créer un dossier pour les images temporaires s'il n'existe pas
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_images')
         os.makedirs(temp_dir, exist_ok=True)
         
-        # Sauvegarder l'image temporaire
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg', dir=temp_dir) as temp_file:
+        # Générer un nom de fichier unique
+        unique_filename = f"{uuid.uuid4()}"
+        
+        # Sauvegarder l'image originale
+        temp_original_path = os.path.join(temp_dir, f"{unique_filename}_original{file_extension}")
+        with open(temp_original_path, 'wb+') as destination:
             for chunk in uploaded_image.chunks():
-                temp_file.write(chunk)
-            temp_image_path = temp_file.name
+                destination.write(chunk)
+        
+        # Traiter l'image TIF si nécessaire
+        if is_tif:
+            try:
+                # Ouvrir l'image TIF
+                tif_image = Image.open(temp_original_path)
+                
+                # Collecter des détails sur l'image TIF
+                image_details = {
+                    'format': tif_image.format,
+                    'mode': tif_image.mode,
+                    'size': tif_image.size,
+                    'bands': tif_image.getbands() if hasattr(tif_image, 'getbands') else None,
+                }
+                
+                # Essayer d'obtenir des métadonnées TIFF
+                if hasattr(tif_image, 'tag_v2'):
+                    metadata = {str(k): str(v) for k, v in tif_image.tag_v2.items()}
+                    image_details['metadata'] = metadata
+                
+                context['image_details'] = image_details
+                
+                # Convertir en PNG pour l'affichage et le traitement
+                png_path = os.path.join(temp_dir, f"{unique_filename}_converted.png")
+                
+                # Gérer les images multiband ou avec des modes spéciaux
+                if tif_image.mode in ['I', 'F', 'I;16', 'L']:
+                    # Convertir en mode compatible avec PNG (8-bit)
+                    tif_image = tif_image.convert('L')
+                elif tif_image.mode not in ['RGB', 'RGBA']:
+                    tif_image = tif_image.convert('RGB')
+                
+                tif_image.save(png_path, 'PNG')
+                
+                # Utiliser l'image PNG pour le traitement
+                processing_path = png_path
+                context['converted'] = True
+                
+            except Exception as e:
+                context['error'] = f"Erreur lors du traitement de l'image TIF: {str(e)}"
+                return render(request, 'segmentation.html', context)
+        else:
+            processing_path = temp_original_path
+            context['converted'] = False
         
         # Chemins relatifs pour les templates
-        relative_path = os.path.relpath(temp_image_path, settings.MEDIA_ROOT)
-        original_image_url = os.path.join(settings.MEDIA_URL, relative_path)
+        original_relative_path = os.path.relpath(temp_original_path, settings.MEDIA_ROOT)
+        original_image_url = os.path.join(settings.MEDIA_URL, original_relative_path)
+        
+        # URL de l'image à utiliser pour le traitement
+        processing_relative_path = os.path.relpath(processing_path, settings.MEDIA_ROOT)
+        processing_image_url = os.path.join(settings.MEDIA_URL, processing_relative_path)
         
         # Ici, vous pourriez appeler votre modèle de segmentation (CNN ou U-Net)
-        # Pour l'instant, nous allons simplement simuler un résultat
-        # Dans une implémentation réelle, vous appelleriez votre modèle ici
+        # utilisez processing_path comme entrée pour votre modèle
         
         # Simulation d'une image résultante (même image pour le moment)
-        segmented_image_url = original_image_url
+        segmented_image_url = processing_image_url
         
         context.update({
             'original_image': original_image_url,
+            'processing_image': processing_image_url,
             'segmented_image': segmented_image_url,
-            'prediction_done': True
+            'prediction_done': True,
+            'is_tif': is_tif,
+            'original_filename': uploaded_image.name
         })
     
     return render(request, 'segmentation.html', context)
