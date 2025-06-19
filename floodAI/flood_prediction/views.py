@@ -3,9 +3,9 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
-from .models import Alerte, AbonnementVille
+from .models import Alerte, AbonnementVille, PasswordResetToken
 from django.db.models import Q
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm, SetPasswordForm
 from django import forms
 from django.http import JsonResponse
 from django.core.mail import send_mail
@@ -579,3 +579,82 @@ def verify_email(request, token):
     except Exception as e:
         messages.error(request, f"Erreur lors de la vérification de l'email: {str(e)}")
         return redirect('register')
+
+# Vue de mot de passe oublié
+def forgot_password(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        
+        # Vérifier si l'email existe
+        if not User.objects.filter(email=email).exists():
+            messages.error(request, 'Aucun compte associé à cet email.')
+            return render(request, 'forgot_password.html')
+        
+        # Supprimer les anciens tokens pour cet email
+        PasswordResetToken.objects.filter(email=email).delete()
+        
+        # Créer un nouveau token
+        reset_token = PasswordResetToken.objects.create(email=email)
+        
+        # Envoyer l'email
+        reset_url = request.build_absolute_uri(f'/reset-password/{reset_token.token}/')
+        subject = 'Réinitialisation de votre mot de passe - FloodAI'
+        message = f"""
+Bonjour,
+
+Vous avez demandé une réinitialisation de mot de passe. Veuillez cliquer sur le lien ci-dessous pour créer un nouveau mot de passe:
+
+{reset_url}
+
+Ce lien expire dans 24 heures.
+
+Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer cet email.
+
+L'équipe FloodAI
+"""
+        from_email = settings.DEFAULT_FROM_EMAIL
+        recipient_list = [email]
+        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        
+        messages.success(request, 'Un email de réinitialisation a été envoyé à votre adresse.')
+        return redirect('login')
+    
+    return render(request, 'forgot_password.html')
+
+# Vue pour réinitialiser le mot de passe avec le token
+def reset_password(request, token):
+    # Récupérer le token
+    try:
+        reset_token = PasswordResetToken.objects.get(token=token)
+        
+        # Vérifier si le token est expiré ou utilisé
+        if reset_token.is_expired or reset_token.used:
+            messages.error(request, 'Ce lien de réinitialisation est expiré ou a déjà été utilisé.')
+            return redirect('forgot_password')
+        
+        # Récupérer l'utilisateur
+        try:
+            user = User.objects.get(email=reset_token.email)
+        except User.DoesNotExist:
+            messages.error(request, 'Aucun utilisateur associé à cet email.')
+            return redirect('forgot_password')
+        
+        if request.method == 'POST':
+            form = SetPasswordForm(user, request.POST)
+            if form.is_valid():
+                form.save()
+                
+                # Marquer le token comme utilisé
+                reset_token.used = True
+                reset_token.save()
+                
+                messages.success(request, 'Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.')
+                return redirect('login')
+        else:
+            form = SetPasswordForm(user)
+        
+        return render(request, 'reset_password.html', {'form': form})
+    
+    except PasswordResetToken.DoesNotExist:
+        messages.error(request, 'Lien de réinitialisation invalide.')
+        return redirect('forgot_password')

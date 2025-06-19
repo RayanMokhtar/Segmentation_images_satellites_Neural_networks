@@ -64,3 +64,18 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"Profil de {self.user.username}"
+
+# Modèle pour la réinitialisation de mot de passe
+class PasswordResetToken(models.Model):
+    email = models.EmailField()
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Réinitialisation pour {self.email}"
+    
+    @property
+    def is_expired(self):
+        expiration_time = timedelta(hours=24)
+        return (timezone.now() - self.created_at) > expiration_time
