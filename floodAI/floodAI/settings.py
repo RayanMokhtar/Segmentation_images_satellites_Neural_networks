@@ -156,14 +156,11 @@ LOGIN_REDIRECT_URL = '/profile/'
 LOGOUT_REDIRECT_URL = '/'
 
 # Email configuration
-# Pour utiliser Gmail comme service d'envoi d'emails
+# Pour la production - utiliser Gmail comme service d'envoi d'emails
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'firefloodai@gmail.com'
 EMAIL_HOST_PASSWORD = get_env_variable('EMAIL_PASSWORD', '')  # Mot de passe d'application
-DEFAULT_FROM_EMAIL = 'firefloodai@gmail.com'  # L'adresse qui apparaîtra comme expéditeur
-
-# Pour le développement - pour afficher les emails dans la console au lieu de les envoyer
-# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'firefloodai@gmail.com'

@@ -138,25 +138,30 @@
             font-style: italic;
             color: #5f6368;
         }
-        .btn-predire {
-            background: #34A853;
-            color: white;
-            border: none;
-            border-radius: 24px;
-            padding: 8px 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-top: 15px;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
+        .no-alerte {
+            color: #666;
+            font-style: italic;
+            padding: 10px 0;
         }
-        .btn-predire:hover {
-            background: #2D9348;
-            color: white;
-            text-decoration: none;
+        .alerte-header {
+            margin-bottom: 5px;
+        }
+        .alerte-level {
+            font-size: 0.9rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        .level-1 {
+            background-color: #fbbc05;
+            color: #fff;
+        }
+        .level-2 {
+            background-color: #ff7043;
+            color: #fff;
+        }
+        .level-3 {
+            background-color: #d93025;
+            color: #fff;
         }
     </style>
 {% endblock %}
@@ -166,15 +171,11 @@
         <div class="profile-header">
             <span class="profile-icon"><i class="fas fa-user-circle"></i></span>
             <div class="profile-name">{{ infos.prenom }} {{ infos.nom }}</div>
-        </div>
-        <div class="profile-card">
+        </div>        <div class="profile-card">
             <div class="profile-card-title">Mes informations</div>
             <div class="profile-info-row"><span class="profile-info-label">Nom :</span><span class="profile-info-value">{{ infos.nom }}</span></div>
             <div class="profile-info-row"><span class="profile-info-label">Prénom :</span><span class="profile-info-value">{{ infos.prenom }}</span></div>
             <div class="profile-info-row"><span class="profile-info-label">Email :</span><span class="profile-info-value">{{ infos.mail }}</span></div>
-            <div class="text-center mt-3">
-                <a href="{% url 'send_prediction_email' %}" class="btn-predire"><i class="fas fa-envelope mr-2"></i> Recevoir une prédiction par email</a>
-            </div>
         </div>
         
         <!-- Ajout de la section Abonnements -->
@@ -193,18 +194,63 @@
                 <div class="no-abonnement">Vous n'êtes abonné à aucune ville. Abonnez-vous pour recevoir des alertes en cas de risque d'inondation.</div>
             {% endif %}
         </div>
-        
-        <div class="alertes-card">
-            <div class="alertes-card-title">Alertes récentes</div>
-            {% for alerte in alertes %}
-            <div class="alerte-item">{{ alerte }}</div>
-            {% endfor %}
+          <div class="alertes-card">
+            <div class="alertes-card-title">Alertes pour mes villes abonnées</div>
+            {% if abonnements %}
+                {% if alertes %}
+                    {% for alerte in alertes %}
+                    <div class="alerte-item mb-3">
+                        <div class="alerte-header d-flex justify-content-between align-items-center">
+                            <strong>{{ alerte }}</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-alerte">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Aucune alerte en cours pour vos abonnements.
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="no-alerte">
+                    <i class="fas fa-bell-slash me-2"></i>
+                    Abonnez-vous à des villes pour recevoir des alertes d'inondation.
+                </div>
+            {% endif %}
         </div>
         
         <div class="d-flex gap-3 justify-content-center">
             <a href="/" class="btn-retour">&#8592; Retour à l'accueil</a>
             <a href="{% url 'logout' %}" class="btn-retour" style="background-color: #d93025;">Déconnexion</a>
         </div>
+          {% if user.is_staff %}
+        <!-- Section Admin pour l'envoi d'emails massifs -->
+        <div class="profile-card mt-4">
+            <div class="profile-card-title">Administration - Envoi d'alertes</div>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i> Cette section vous permet d'envoyer une alerte par email à tous les utilisateurs abonnés à une ville spécifique.
+                L'alerte sera également enregistrée dans la base de données et apparaîtra dans le profil des utilisateurs concernés.
+            </div>
+            <form method="post" action="{% url 'send_city_alert' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="city_name" class="form-label">Nom de la ville:</label>
+                    <input type="text" class="form-control" id="city_name" name="city_name" placeholder="Ex: Paris, Lyon, Marseille" required>
+                    <small class="form-text text-muted">Entrez le nom exact de la ville tel qu'il apparaît dans les abonnements.</small>
+                </div>
+                <div class="mb-3">
+                    <label for="alert_message" class="form-label">Message d'alerte:</label>
+                    <textarea class="form-control" id="alert_message" name="alert_message" rows="4" placeholder="Décrivez la situation et les instructions à suivre..." required></textarea>
+                    <small class="form-text text-muted">Ce message sera envoyé par email et affiché dans le profil des abonnés.</small>
+                </div>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Envoyer l'alerte
+                    </button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
     </div>
 
     {% if messages %}

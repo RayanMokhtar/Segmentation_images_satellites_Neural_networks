@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
+from datetime import timedelta
+from django.utils import timezone
 
 # Modèle pour les alertes
 class Alerte(models.Model):
@@ -29,3 +32,35 @@ class AbonnementVille(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.ville}"
+
+# Modèle pour la vérification d'email
+class EmailVerification(models.Model):
+    email = models.EmailField(unique=True)
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    username = models.CharField(max_length=150)
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=30)
+    password = models.CharField(max_length=128)
+    adresse = models.CharField(max_length=255, blank=True, null=True)
+    ville = models.CharField(max_length=100, blank=True, null=True)
+    code_postal = models.CharField(max_length=10, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Vérification pour {self.email}"
+    
+    @property
+    def is_expired(self):
+        expiration_time = timedelta(hours=24)
+        return (timezone.now() - self.created_at) > expiration_time
+
+# Modèle pour les profils utilisateurs avec adresse
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    adresse = models.CharField(max_length=255, blank=True, null=True)
+    ville = models.CharField(max_length=100, blank=True, null=True)
+    code_postal = models.CharField(max_length=10, blank=True, null=True)
+    
+    def __str__(self):
+        return f"Profil de {self.user.username}"

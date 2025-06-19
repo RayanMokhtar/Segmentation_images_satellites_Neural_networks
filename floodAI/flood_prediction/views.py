@@ -20,10 +20,13 @@ class InscriptionForm(UserCreationForm):
     first_name = forms.CharField(max_length=30, required=True, label='Prénom')
     last_name = forms.CharField(max_length=30, required=True, label='Nom')
     email = forms.EmailField(max_length=254, required=True, label='Email')
+    adresse = forms.CharField(max_length=255, required=True, label='Adresse')
+    ville = forms.CharField(max_length=100, required=True, label='Ville')
+    code_postal = forms.CharField(max_length=10, required=True, label='Code postal')
 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
+        fields = ('username', 'first_name', 'last_name', 'email', 'adresse', 'ville', 'code_postal', 'password1', 'password2')
     
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -51,12 +54,60 @@ def home(request):
 def register(request):
     if request.method == 'POST':
         form = InscriptionForm(request.POST)
-        if form.is_valid():
-            user = form.save()
+        if form.is_valid():            # Ne pas créer l'utilisateur tout de suite
+            user_data = {
+                'username': form.cleaned_data['username'],
+                'email': form.cleaned_data['email'],
+                'first_name': form.cleaned_data['first_name'],
+                'last_name': form.cleaned_data['last_name'],
+                'password': form.cleaned_data['password1'],
+                'adresse': form.cleaned_data['adresse'],
+                'ville': form.cleaned_data['ville'],
+                'code_postal': form.cleaned_data['code_postal'],
+            }
             
-            login(request, user)
-            messages.success(request, f'Compte créé avec succès! Bienvenue {user.first_name}!')
-            return redirect('home')
+            # Vérifier si l'email existe déjà
+            if User.objects.filter(email=user_data['email']).exists():
+                messages.error(request, 'Un compte avec cet email existe déjà.')
+                return render(request, 'register.html', {'form': form})
+            
+            # Vérifier si une vérification est déjà en cours pour cet email
+            from .models import EmailVerification
+            existing_verification = EmailVerification.objects.filter(email=user_data['email'])
+            if existing_verification.exists():
+                # Supprimer les anciennes vérifications pour cet email
+                existing_verification.delete()
+              # Créer une entrée dans la table de vérification
+            verification = EmailVerification.objects.create(
+                email=user_data['email'],
+                username=user_data['username'],
+                first_name=user_data['first_name'],
+                last_name=user_data['last_name'],
+                password=user_data['password'],
+                adresse=user_data['adresse'],
+                ville=user_data['ville'],
+                code_postal=user_data['code_postal'],
+            )
+              # Envoyer un email de vérification
+            verification_url = request.build_absolute_uri(f'/verify-email/{verification.token}/')
+            subject = 'Vérification de votre adresse email - FloodAI'
+            message = f"""
+Bonjour {user_data['first_name']},
+
+Merci de vous être inscrit sur FloodAI. Pour activer votre compte, veuillez cliquer sur le lien ci-dessous:
+
+{verification_url}
+
+Ce lien expire dans 24 heures.
+
+L'équipe FloodAI
+"""
+            from_email = settings.DEFAULT_FROM_EMAIL
+            recipient_list = [user_data['email']]
+            send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+            
+            # Rediriger vers la page de vérification d'email
+            return render(request, 'email_verification_sent.html', {'email': user_data['email']})
     else:
         form = InscriptionForm()
     
@@ -213,19 +264,21 @@ def unsubscribe_city(request, abonnement_id):
 @login_required
 def profil(request):
     user = request.user
-    
-    # Récupérer les abonnements de l'utilisateur
+      # Récupérer les abonnements de l'utilisateur
     abonnements = AbonnementVille.objects.filter(user=user).order_by('ville')
     
-    # Récupérer quelques alertes génériques pour la démo
-    alertes_recentes = Alerte.objects.all().order_by('-date_creation')[:3]
-    alertes = [f"{alerte.titre} : {alerte.message}" for alerte in alertes_recentes]
+    # Récupérer les villes auxquelles l'utilisateur est abonné
+    villes_abonnees = abonnements.values_list('ville', flat=True)
     
-    # Si pas d'alertes, ajouter quelques exemples
+    # Récupérer uniquement les alertes pour les villes auxquelles l'utilisateur est abonné
+    alertes_recentes = Alerte.objects.filter(ville__in=villes_abonnees).order_by('-date_creation')[:5]
+    alertes = [f"{alerte.titre} ({alerte.date_creation.strftime('%d/%m/%Y')}) : {alerte.message}" for alerte in alertes_recentes]
+    
+    # Si pas d'alertes, ajouter un message d'information
     if not alertes:
         alertes = [
-            "Aucune alerte en cours.",
-            "Vous recevrez des notifications en cas de risque d'inondation."
+            "Aucune alerte en cours pour vos villes abonnées.",
+            "Vous recevrez des notifications en cas de risque d'inondation dans les villes que vous suivez."
         ]
     
     infos = {
@@ -340,81 +393,189 @@ def lstm(request):
     
     return render(request, 'lstm.html', context)
 
-# Fonction pour envoyer un email de prédiction
+# Fonction pour envoyer un email à tous les abonnés d'une ville (accès staff seulement)
 @login_required
-def send_prediction_email(request):
-    user = request.user
-    email = user.email
-    
-    # Débogage pour voir les paramètres d'email
-    from django.conf import settings
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.error(f"Tentative d'envoi d'email à {email}")
-    logger.error(f"Configuration: {settings.EMAIL_HOST}, {settings.EMAIL_PORT}, {settings.EMAIL_HOST_USER}")
-    
-    if not email:
-        messages.error(request, "Vous n'avez pas d'adresse email configurée dans votre profil.")
+def send_city_alert(request):
+    # Vérifier que l'utilisateur est membre du staff
+    if not request.user.is_staff:
+        messages.error(request, "Vous n'avez pas les autorisations nécessaires pour effectuer cette action.")
         return redirect('profil')
     
-    # Générer une prédiction aléatoire pour démonstration
-    prediction_value = random.randint(0, 100)
+    # Vérifier que c'est une requête POST
+    if request.method != 'POST':
+        return redirect('profil')
     
-    # Déterminer le niveau de risque basé sur la valeur de prédiction
-    if prediction_value > 70:
-        risk_level = "élevé"
-    elif prediction_value > 30:
-        risk_level = "modéré"
-    else:
-        risk_level = "faible"
+    # Récupérer les données du formulaire
+    city_name = request.POST.get('city_name', '').strip()
+    alert_message = request.POST.get('alert_message', '').strip()
     
-    # Date du jour pour la prédiction
-    today = date.today().strftime('%d/%m/%Y')
-      # Contenu de l'email
-    subject = f"Prédiction de risque d'inondation - {today}"
-    message = f"""
+    if not city_name or not alert_message:
+        messages.error(request, "Le nom de la ville et le message d'alerte sont requis.")
+        return redirect('profil')
+    
+    # Récupérer tous les abonnements pour cette ville
+    abonnements = AbonnementVille.objects.filter(ville__iexact=city_name)
+    
+    if not abonnements.exists():
+        messages.warning(request, f"Aucun utilisateur n'est abonné à {city_name}.")
+        return redirect('profil')
+    
+    # La date du jour pour l'alerte
+    today_date = date.today()
+    today_formatted = today_date.strftime('%d/%m/%Y')
+    
+    # Calculer un niveau de risque aléatoire
+    # On pourrait le remplacer par une vraie logique basée sur des données météo
+    risk_level = random.randint(1, 3)  # 1 = faible, 2 = moyen, 3 = élevé
+    risk_text = "faible" if risk_level == 1 else "moyen" if risk_level == 2 else "élevé"
+    
+    # Formater le titre en fonction du niveau de risque
+    alert_title = f"Alerte niveau {risk_level} - {city_name}"
+    
+    # Préparer l'email
+    subject = f"ALERTE INONDATION ({risk_text}) - {city_name} - {today_formatted}"
+    
+    # Compter le nombre d'emails envoyés
+    emails_sent = 0
+    emails_failed = 0
+    
+    # Enregistrer l'alerte dans la base de données
+    alerte = Alerte.objects.create(
+        titre=alert_title,
+        message=alert_message,
+        ville=city_name,
+        niveau=risk_level,
+        date_creation=today_date
+    )
+    
+    # Pour chaque abonnement, envoyer un email à l'utilisateur associé
+    for abonnement in abonnements:
+        user = abonnement.user
+        
+        if not user.email:
+            # Ignorer les utilisateurs sans email
+            emails_failed += 1
+            continue
+        
+        # Message personnalisé avec le nom de l'utilisateur et les coordonnées GPS
+        message = f"""
 Bonjour {user.first_name} {user.last_name},
 
-Voici votre prédiction de risque d'inondation du {today}.
+ALERTE MÉTÉOROLOGIQUE POUR {city_name.upper()} - NIVEAU DE RISQUE: {risk_text.upper()}
 
-Risque d'inondation : {prediction_value}% - Niveau {risk_level}
+{alert_message}
 
-Cette prédiction est basée sur les données météorologiques actuelles et l'analyse de notre modèle IA.
+Cette alerte est générée le {today_formatted} pour les coordonnées:
+Latitude: {abonnement.latitude:.6f}
+Longitude: {abonnement.longitude:.6f}
 
-Nous vous recommandons de rester vigilant et de suivre les consignes de sécurité en cas d'alerte météorologique.
+Recommandations:
+{get_recommendations_by_risk_level(risk_level)}
+
+Prenez les précautions nécessaires et suivez les consignes de sécurité locales.
+
+Vous recevez cet email car vous êtes abonné aux alertes pour {city_name}.
+Pour vous désabonner, connectez-vous à votre profil sur FireFloodAI.
 
 Cordialement,
 L'équipe FireFloodAI
-    """
+        """
+        
+        try:
+            # Envoyer l'email
+            from django.conf import settings
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+            emails_sent += 1
+        except Exception as e:
+            # Log l'erreur
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur d'envoi d'email à {user.email}: {str(e)}")
+            emails_failed += 1
     
-    try:
-        # Utiliser le DEFAULT_FROM_EMAIL des settings pour l'expéditeur
-        from django.conf import settings
-        sender_email = settings.DEFAULT_FROM_EMAIL
-        
-        # Envoyer l'email
-        send_mail(
-            subject,
-            message,
-            sender_email,  # Expéditeur configuré dans settings.py
-            [email],  # Destinataire
-            fail_silently=False,
-        )
-        messages.success(request, f"Un email de prédiction a été envoyé à votre adresse {email}.")
-        
-        # Log de succès
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Email envoyé avec succès à {email}")
-        
-    except Exception as e:
-        # Enregistrer l'erreur détaillée
-        import logging
-        import traceback
-        logger = logging.getLogger(__name__)
-        logger.error(f"Erreur lors de l'envoi de l'email à {email}: {str(e)}")
-        logger.error(traceback.format_exc())
-        
-        messages.error(request, f"Erreur lors de l'envoi de l'email: {str(e)}")
+    # Message de confirmation
+    if emails_sent > 0:
+        messages.success(request, f"Alerte envoyée à {emails_sent} abonné(s) de {city_name}. Échecs: {emails_failed}")
+    else:
+        messages.error(request, f"Impossible d'envoyer les alertes. {emails_failed} échecs.")
     
     return redirect('profil')
+
+# Fonction utilitaire pour obtenir des recommandations en fonction du niveau de risque
+def get_recommendations_by_risk_level(risk_level):
+    if risk_level == 1:  # Faible
+        return """
+- Restez informé des prévisions météorologiques.
+- Assurez-vous que vos gouttières et systèmes d'évacuation d'eau sont dégagés.
+- Vérifiez que vous avez une trousse d'urgence à jour.
+"""
+    elif risk_level == 2:  # Moyen
+        return """
+- Mettez en hauteur les objets de valeur et les documents importants.
+- Préparez-vous à couper l'électricité si nécessaire.
+- Évitez de vous déplacer dans les zones basses.
+- Ayez un moyen de communication d'urgence chargé et fonctionnel.
+"""
+    else:  # Élevé (3)
+        return """
+- RESTEZ À L'ABRI et ne vous déplacez pas sauf instructions contraires des autorités.
+- Si vous êtes à l'extérieur, cherchez un terrain élevé.
+- Ne traversez JAMAIS une zone inondée à pied ou en voiture.
+- Préparez-vous à évacuer si les autorités le demandent.
+- Gardez votre trousse d'urgence à portée de main.
+- Coupez le gaz et l'électricité si vous êtes dans une zone inondée.
+"""
+
+# Vue pour vérifier l'email
+def verify_email(request, token):
+    try:
+        from .models import EmailVerification, UserProfile
+        verification = get_object_or_404(EmailVerification, token=token, is_verified=False)
+        
+        # Vérifier si le token n'a pas expiré
+        if verification.is_expired:
+            messages.error(request, 'Le lien de vérification a expiré. Veuillez vous inscrire à nouveau.')
+            verification.delete()
+            return redirect('register')
+        
+        # Vérifier si l'utilisateur existe déjà avec cet email
+        if User.objects.filter(email=verification.email).exists():
+            messages.error(request, 'Un compte avec cet email existe déjà.')
+            verification.delete()
+            return redirect('login')
+        
+        # Créer l'utilisateur
+        user = User.objects.create_user(
+            username=verification.username,
+            email=verification.email,
+            password=verification.password,
+            first_name=verification.first_name,
+            last_name=verification.last_name,
+        )
+        
+        # Créer le profil utilisateur avec les informations d'adresse
+        UserProfile.objects.create(
+            user=user,
+            adresse=verification.adresse,
+            ville=verification.ville,
+            code_postal=verification.code_postal,
+        )
+        
+        # Marquer la vérification comme effectuée
+        verification.is_verified = True
+        verification.save()
+        
+        # Connecter l'utilisateur
+        login(request, user)
+        messages.success(request, f'Votre compte a été activé avec succès! Bienvenue {user.first_name}!')
+        return redirect('home')
+    
+    except Exception as e:
+        messages.error(request, f"Erreur lors de la vérification de l'email: {str(e)}")
+        return redirect('register')
