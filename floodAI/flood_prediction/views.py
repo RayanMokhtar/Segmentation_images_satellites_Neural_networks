@@ -772,6 +772,7 @@ def get_cnn_prediction(request):
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Format de données invalide'}, status=400)
         except Exception as e:
+            print(f"Erreur lors de la prédiction CNN: {str(e)}")
             return JsonResponse({'error générale lors de la prédiction cnn ': str(e)}, status=500)
 
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
