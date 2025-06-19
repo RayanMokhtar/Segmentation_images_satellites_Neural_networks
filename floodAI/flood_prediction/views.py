@@ -52,6 +52,11 @@ def home(request):
     return JsonResponse({'success': False, 'error': 'Méthode non autorisée'})
 
 def register(request):
+    # Si l'utilisateur est déjà connecté, le rediriger vers la page d'accueil
+    if request.user.is_authenticated:
+        messages.info(request, 'Vous êtes déjà connecté.')
+        return redirect('home')
+        
     if request.method == 'POST':
         form = InscriptionForm(request.POST)
         if form.is_valid():            # Ne pas créer l'utilisateur tout de suite
@@ -115,6 +120,11 @@ L'équipe FloodAI
 
 # Vue de connexion
 def login_page(request):
+    # Si l'utilisateur est déjà connecté, le rediriger vers la page d'accueil
+    if request.user.is_authenticated:
+        messages.info(request, 'Vous êtes déjà connecté.')
+        return redirect('home')
+        
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
@@ -281,12 +291,25 @@ def profil(request):
             "Vous recevrez des notifications en cas de risque d'inondation dans les villes que vous suivez."
         ]
     
+    # Récupérer les informations du profil utilisateur
+    try:
+        from .models import UserProfile
+        profile = UserProfile.objects.get(user=user)
+        adresse = profile.adresse or ''
+        ville = profile.ville or ''
+        code_postal = profile.code_postal or ''
+    except UserProfile.DoesNotExist:
+        adresse = ''
+        ville = ''
+        code_postal = ''
+    
     infos = {
         'nom': user.last_name or '',
         'prenom': user.first_name or '',
         'mail': user.email or '',
-        'adresse': '',  # Plus utilisé avec le modèle User standard
-        'ville': ''     # Plus utilisé avec le modèle User standard
+        'adresse': adresse,
+        'ville': ville,
+        'code_postal': code_postal
     }
     
     return render(request, 'profil.html', {
@@ -534,6 +557,11 @@ def get_recommendations_by_risk_level(risk_level):
 
 # Vue pour vérifier l'email
 def verify_email(request, token):
+    # Si l'utilisateur est déjà connecté, le rediriger vers la page d'accueil
+    if request.user.is_authenticated:
+        messages.info(request, 'Vous êtes déjà connecté. Veuillez vous déconnecter pour vérifier un nouvel email.')
+        return redirect('home')
+        
     try:
         from .models import EmailVerification, UserProfile
         verification = get_object_or_404(EmailVerification, token=token, is_verified=False)
@@ -582,6 +610,11 @@ def verify_email(request, token):
 
 # Vue de mot de passe oublié
 def forgot_password(request):
+    # Si l'utilisateur est déjà connecté, le rediriger vers la page d'accueil
+    if request.user.is_authenticated:
+        messages.info(request, 'Vous êtes déjà connecté.')
+        return redirect('home')
+        
     if request.method == 'POST':
         email = request.POST.get('email')
         
@@ -623,6 +656,11 @@ L'équipe FloodAI
 
 # Vue pour réinitialiser le mot de passe avec le token
 def reset_password(request, token):
+    # Si l'utilisateur est déjà connecté, le rediriger vers la page d'accueil
+    if request.user.is_authenticated:
+        messages.info(request, 'Vous êtes déjà connecté. Veuillez vous déconnecter pour réinitialiser un mot de passe.')
+        return redirect('home')
+        
     # Récupérer le token
     try:
         reset_token = PasswordResetToken.objects.get(token=token)
