@@ -14,7 +14,7 @@ import json
 import requests
 import random
 from datetime import datetime, date, timedelta
-from .fake_prediction import predict_flood
+from .fake_prediction import predict_flood , convertir_tif_avec_rasterio
 import base64
 import os
 
@@ -298,98 +298,127 @@ def profil(request):
         'alertes': alertes
     })
 
-# Vue pour la page de segmentation d'images
 def segmentation(request):
+    import os
+    import traceback
+    from django.conf import settings
+    from PIL import Image
+    import uuid
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('Agg')
+    
     context = {
         'model_type': request.POST.get('model_type', 'CNN')
     }
     
     if request.method == 'POST' and request.FILES.get('image'):
         uploaded_image = request.FILES['image']
-        
-        # Imports nécessaires
-        import os
-        from django.conf import settings
-        import tempfile
-        from PIL import Image
-        import uuid
+        model_type = request.POST.get('model_type', 'CNN')
         
         # Vérifier l'extension de fichier
         file_extension = os.path.splitext(uploaded_image.name)[1].lower()
         is_tif = file_extension in ['.tif', '.tiff']
         
-        # Créer un dossier pour les images temporaires s'il n'existe pas
+        # Créer un dossier pour les images temporaires
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_images')
         os.makedirs(temp_dir, exist_ok=True)
         
         # Générer un nom de fichier unique
         unique_filename = f"{uuid.uuid4()}"
         
-        # Sauvegarder l'image originale
+        # Chemin pour l'image originale
         temp_original_path = os.path.join(temp_dir, f"{unique_filename}_original{file_extension}")
+        
+        # Sauvegarder l'image originale
         with open(temp_original_path, 'wb+') as destination:
             for chunk in uploaded_image.chunks():
                 destination.write(chunk)
         
-        # Traiter l'image TIF si nécessaire
+        print(f"Image sauvegardée à: {temp_original_path}")
+        
+        # Pour les images TIF, utiliser la fonction rasterio pour créer une visualisation
         if is_tif:
-            try:
-                # Ouvrir l'image TIF
-                tif_image = Image.open(temp_original_path)
-                
-                # Collecter des détails sur l'image TIF
-                image_details = {
-                    'format': tif_image.format,
-                    'mode': tif_image.mode,
-                    'size': tif_image.size,
-                    'bands': tif_image.getbands() if hasattr(tif_image, 'getbands') else None,
-                }
-                
-                # Essayer d'obtenir des métadonnées TIFF
-                if hasattr(tif_image, 'tag_v2'):
-                    metadata = {str(k): str(v) for k, v in tif_image.tag_v2.items()}
-                    image_details['metadata'] = metadata
-                
-                context['image_details'] = image_details
-                
-                # Convertir en PNG pour l'affichage et le traitement
-                png_path = os.path.join(temp_dir, f"{unique_filename}_converted.png")
-                
-                # Gérer les images multiband ou avec des modes spéciaux
-                if tif_image.mode in ['I', 'F', 'I;16', 'L']:
-                    # Convertir en mode compatible avec PNG (8-bit)
-                    tif_image = tif_image.convert('L')
-                elif tif_image.mode not in ['RGB', 'RGBA']:
-                    tif_image = tif_image.convert('RGB')
-                
-                tif_image.save(png_path, 'PNG')
-                
-                # Utiliser l'image PNG pour le traitement
-                processing_path = png_path
+            # Utiliser la fonction de conversion avec rasterio
+            from .fake_prediction import convertir_tif_avec_rasterio
+            
+            preview_filename = f"{unique_filename}_preview.png"
+            preview_path = os.path.join(temp_dir, preview_filename)
+            
+            # Convertir le TIF en PNG avec visualisation
+            conversion_result = convertir_tif_avec_rasterio(temp_original_path, preview_path)
+            
+            if conversion_result:
+                # Utiliser la visualisation créée
+                original_url_path = f"temp_images/{preview_filename}"
+                processing_path = temp_original_path  # Garder le TIF original pour la prédiction
+                processing_url_path = f"temp_images/{preview_filename}"
                 context['converted'] = True
-                
-            except Exception as e:
-                context['error'] = f"Erreur lors du traitement de l'image TIF: {str(e)}"
+            else:
+                context['error'] = "Erreur lors de la conversion de l'image TIF"
                 return render(request, 'segmentation.html', context)
         else:
+            # Pour les autres formats, utiliser directement l'image
+            original_url_path = f"temp_images/{unique_filename}_original{file_extension}"
             processing_path = temp_original_path
+            processing_url_path = original_url_path
             context['converted'] = False
         
-        # Chemins relatifs pour les templates
-        original_relative_path = os.path.relpath(temp_original_path, settings.MEDIA_ROOT)
-        original_image_url = os.path.join(settings.MEDIA_URL, original_relative_path)
+        # Construire les URLs pour l'affichage
+        original_image_url = f"{settings.MEDIA_URL}{original_url_path}"
+        processing_image_url = f"{settings.MEDIA_URL}{processing_url_path}"
+        segmented_image_url = processing_image_url  # Par défaut
         
-        # URL de l'image à utiliser pour le traitement
-        processing_relative_path = os.path.relpath(processing_path, settings.MEDIA_ROOT)
-        processing_image_url = os.path.join(settings.MEDIA_URL, processing_relative_path)
+        # Si le modèle est CNN, faire la prédiction
+        if model_type == 'CNN':
+            try:
+                from .fake_prediction import predict_flood_from_image
+                
+                print(f"Lancement de la prédiction sur: {processing_path}")
+                prediction_result = predict_flood_from_image(processing_path)
+                
+                if prediction_result.get('success') and 'files' in prediction_result:
+                    output_path = prediction_result['files'].get('output_visualization')
+                    
+                    if output_path and os.path.exists(output_path):
+                        # Pour les images TIF, créer une nouvelle visualisation avec rasterio
+                        if is_tif:
+                            # Utiliser encore rasterio pour la sortie finale
+                            final_result_filename = f"{unique_filename}_result.png"
+                            final_result_path = os.path.join(temp_dir, final_result_filename)
+                            
+                            # Copier le résultat de prédiction ou le convertir
+                            import shutil
+                            shutil.copy2(output_path, final_result_path)
+                            
+                            segmented_image_url = f"{settings.MEDIA_URL}temp_images/{final_result_filename}"
+                        else:
+                            # Pour les autres formats, utiliser directement le résultat
+                            try:
+                                output_relative_path = os.path.relpath(output_path, settings.MEDIA_ROOT)
+                                segmented_image_url = f"{settings.MEDIA_URL}{output_relative_path}"
+                            except ValueError:
+                                import shutil
+                                output_filename = os.path.basename(output_path)
+                                new_output_path = os.path.join(temp_dir, output_filename)
+                                shutil.copy2(output_path, new_output_path)
+                                segmented_image_url = f"{settings.MEDIA_URL}temp_images/{output_filename}"
+                    
+                    context['prediction_result'] = prediction_result['prediction']
+                else:
+                    if prediction_result and 'error' in prediction_result:
+                        context['cnn_error'] = f"Prédiction échouée: {prediction_result['error']}"
+                    else:
+                        context['cnn_error'] = "La prédiction n'a pas généré de résultat valide."
+            
+            except Exception as e:
+                context['cnn_error'] = f"Erreur lors de la prédiction CNN: {str(e)}"
+                context['traceback'] = traceback.format_exc()
         
-        # Ici, vous pourriez appeler votre modèle de segmentation (CNN ou U-Net)
-        # utilisez processing_path comme entrée pour votre modèle
-        
-        # Simulation d'une image résultante (même image pour le moment)
-        segmented_image_url = processing_image_url
-        
+        # Mettre à jour le contexte
         context.update({
+            "model_type": model_type,
             'original_image': original_image_url,
             'processing_image': processing_image_url,
             'segmented_image': segmented_image_url,
@@ -399,6 +428,8 @@ def segmentation(request):
         })
     
     return render(request, 'segmentation.html', context)
+
+
 
 # Vue pour la page de prédiction LSTM
 def lstm(request):

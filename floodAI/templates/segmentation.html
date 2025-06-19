@@ -29,7 +29,59 @@
         </div>
     </div>
 
-    {% if not prediction_done %}
+    {% if prediction_done %}
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="text-center mb-4" id="result-title">
+                Résultat de segmentation avec {{ model_type|default:"CNN" }}
+            </h2>
+            
+            {% if cnn_error %}
+            <div class="alert alert-danger">
+                <strong>Erreur de prédiction:</strong> {{ cnn_error }}
+                {% if traceback %}
+                <pre class="mt-2">{{ traceback }}</pre>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="result-container">
+                <div class="image-container">
+                    <h4>Image originale{% if is_tif %} (TIF converti){% endif %}</h4>
+                    <img src="{{ original_image }}" alt="Image originale" class="result-image">
+                    {% if is_tif and image_details %}
+                    <div class="image-details">
+                        <small>Format: {{ image_details.format }}, Mode: {{ image_details.mode }}, 
+                        Dimensions: {{ image_details.size.0 }}x{{ image_details.size.1 }}{% if image_details.bands %}, 
+                        Bandes: {{ image_details.bands|join:", " }}{% endif %}</small>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="image-container">
+                    {% if model_type == 'U-Net' %}
+                    <h4>Image segmentée</h4>
+                    <img src="{{ segmented_image }}" alt="Image segmentée" class="result-image">
+                    {% endif %}
+                    {% if prediction_result %}
+                    <div class="prediction-details">
+                        <div class="alert {% if prediction_result.is_flooded %}alert-danger{% else %}alert-success{% endif %}">
+                            <h5>Résultats de la prédiction:</h5>
+                            <p><strong>Risque:</strong> {{ prediction_result.risk_level }}</p>
+                            <p><strong>Pourcentage d'inondation:</strong> {{ prediction_result.flood_percentage }}%</p>
+                            <p><strong>Confiance:</strong> {{ prediction_result.confidence }}%</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <a href="{% url 'segmentation' %}" class="btn btn-primary">Nouvelle prédiction</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
     <form id="upload-form" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         <input type="hidden" name="model_type" id="model-type-input" value="{{ model_type|default:'CNN' }}">
@@ -47,27 +99,6 @@
             </div>
         </div>
     </form>
-    {% else %}
-    <div class="row">
-        <div class="col-md-12">
-            <h2 class="text-center mb-4" id="result-title">
-                Résultat de segmentation avec {{ model_type|default:"CNN" }}
-            </h2>
-            <div class="result-container">
-                <div class="image-container">
-                    <h4>Image originale</h4>
-                    <img src="{{ original_image }}" alt="Image originale" class="result-image">
-                </div>
-                <div class="image-container">
-                    <h4>Image segmentée</h4>
-                    <img src="{{ segmented_image }}" alt="Image segmentée" class="result-image">
-                </div>
-            </div>
-            <div class="text-center mt-4">
-                <a href="{% url 'segmentation' %}" class="btn new-prediction-btn">Nouvelle prédiction</a>
-            </div>
-        </div>
-    </div>
     {% endif %}
 </div>
 
