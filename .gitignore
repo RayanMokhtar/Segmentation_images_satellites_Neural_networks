@@ -31,3 +31,7 @@ static_root/
 *.log
 temp/
 tmp/
+
+.git/
+
+floodAI/.git/
