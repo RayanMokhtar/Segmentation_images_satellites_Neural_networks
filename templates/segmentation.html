@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Segmentation d'images - FireFloodAI{% endblock %}
+
+{% block extra_head %}
+<!-- Styles déjà inclus dans style.css -->
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12 text-center">
+            <h1 class="mb-4">Segmentation d'images satellites</h1>
+            <p>Téléchargez une image satellite pour effectuer une segmentation et identifier les zones à risque d'inondation.</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="model-selection">
+                <div class="model-option {% if model_type == 'CNN' or not model_type %}active{% endif %}" data-model="CNN">
+                    CNN (Réseau de neurones convolutif)
+                </div>
+                <div class="model-option {% if model_type == 'U-Net' %}active{% endif %}" data-model="U-Net">
+                    U-Net
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not prediction_done %}
+    <form id="upload-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="model_type" id="model-type-input" value="{{ model_type|default:'CNN' }}">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="upload-container" id="upload-container">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3>Glissez-déposez votre image ici</h3>
+                    <p>ou</p>
+                    <button type="button" class="btn btn-primary" id="browse-button">Parcourir les fichiers</button>
+                    <input type="file" name="image" id="image-input" class="hidden-input" accept="image/*" required>
+                </div>
+            </div>
+        </div>
+    </form>
+    {% else %}
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="text-center mb-4" id="result-title">
+                Résultat de segmentation avec {{ model_type|default:"CNN" }}
+            </h2>
+            <div class="result-container">
+                <div class="image-container">
+                    <h4>Image originale</h4>
+                    <img src="{{ original_image }}" alt="Image originale" class="result-image">
+                </div>
+                <div class="image-container">
+                    <h4>Image segmentée</h4>
+                    <img src="{{ segmented_image }}" alt="Image segmentée" class="result-image">
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <a href="{% url 'segmentation' %}" class="btn new-prediction-btn">Nouvelle prédiction</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gestion du drag & drop
+        const uploadContainer = document.getElementById('upload-container');
+        const imageInput = document.getElementById('image-input');
+        const browseButton = document.getElementById('browse-button');
+        const uploadForm = document.getElementById('upload-form');
+        
+        if (uploadContainer && imageInput) {
+            // Ouvrir le sélecteur de fichier quand on clique sur le bouton parcourir
+            browseButton.addEventListener('click', function() {
+                imageInput.click();
+            });
+            
+            // Soumettre le formulaire quand une image est sélectionnée
+            imageInput.addEventListener('change', function() {
+                if (imageInput.files.length > 0) {
+                    uploadForm.submit();
+                }
+            });
+            
+            // Gestion du drag over
+            uploadContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadContainer.style.borderColor = '#007bff';
+                uploadContainer.style.backgroundColor = '#f0f7ff';
+            });
+            
+            // Gestion du drag leave
+            uploadContainer.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadContainer.style.borderColor = '#ccc';
+                uploadContainer.style.backgroundColor = '#f8f9fa';
+            });
+            
+            // Gestion du drop
+            uploadContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadContainer.style.borderColor = '#28a745';
+                uploadContainer.style.backgroundColor = '#f8f9fa';
+                
+                if (e.dataTransfer.files.length > 0) {
+                    imageInput.files = e.dataTransfer.files;
+                    uploadForm.submit();
+                }
+            });
+        }
+        
+        // Gestion de la sélection du modèle
+        const modelOptions = document.querySelectorAll('.model-option');
+        const modelTypeInput = document.getElementById('model-type-input');
+        
+        modelOptions.forEach(option => {
+            option.addEventListener('click', function() {
+                // Mise à jour visuelle
+                modelOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Mise à jour de la valeur du formulaire
+                const modelType = this.getAttribute('data-model');
+                if (modelTypeInput) {
+                    modelTypeInput.value = modelType;
+                }
+                
+                // Mise à jour du titre si on est en affichage de résultat
+                const resultTitle = document.getElementById('result-title');
+                if (resultTitle) {
+                    resultTitle.textContent = `Résultat de segmentation avec ${modelType}`;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

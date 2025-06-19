@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+
+{% block title %}Inscription - FireFloodAI{% endblock %}
+
+{% block extra_head %}
+    <style>
+        body {
+            background: linear-gradient(120deg, #e3f0ff 0%, #f8f9fa 100%);
+            min-height: 100vh;
+        }
+        .login-container {
+            max-width: 480px;
+            margin: 48px auto;
+            padding: 0 12px;
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(26,115,232,0.10);
+            padding: 1.8rem 1.5rem;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .login-header .login-icon {
+            font-size: 3.5rem;
+            color: #1a73e8;
+        }
+        .login-header .login-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            color: #1a73e8;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            font-weight: 600;
+            color: #5f6368;
+            margin-bottom: 0.5rem;
+        }
+        .form-control {
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            border: 1px solid #dadce0;
+        }
+        .form-control:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 0.2rem rgba(26,115,232,0.15);
+        }
+        .btn-submit {
+            display: block;
+            width: 100%;
+            background: #1a73e8;
+            color: #fff;
+            font-weight: 600;
+            border-radius: 24px;
+            padding: 10px 16px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(26,115,232,0.10);
+            transition: background 0.2s;
+            margin-top: 2rem;
+        }
+        .btn-submit:hover {
+            background: #1761c1;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: #5f6368;
+        }
+        .login-footer a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .errorlist {
+            list-style: none;
+            padding: 0;
+            margin-top: 0.25rem;
+            color: #d93025;
+            font-size: 0.9rem;
+        }
+        .alert-error {
+            background-color: #fbe9e7;
+            color: #d93025;
+            border-color: #ffcdd2;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-success {
+            background-color: #e8f5e9;
+            color: #388e3c;
+            border-color: #c8e6c9;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }        .form-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .password-requirements {
+            margin-top: 10px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        .password-requirement {
+            margin: 5px 0;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+        }
+        .requirement-icon {
+            margin-right: 8px;
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+        }
+        .requirement-text {
+            flex: 1;
+        }
+        .valid-requirement {
+            color: #28a745;
+        }
+        .invalid-requirement {
+            color: #6c757d;
+        }
+        .password-match-indicator {
+            margin-top: 5px;
+            font-size: 0.85rem;
+        }
+        .password-strength-meter {
+            height: 5px;
+            border-radius: 2px;
+            margin-top: 8px;
+            background-color: #e9ecef;
+            overflow: hidden;
+        }
+        .password-strength-value {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <span class="login-icon"><i class="fas fa-user-plus"></i></span>
+                <h1 class="login-title">Inscription</h1>
+            </div>
+            
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="{{ form.username.id_for_label }}">Nom d'utilisateur</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.username.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.first_name.id_for_label }}">Prénom</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.first_name.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.last_name.id_for_label }}">Nom</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.last_name.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">Email</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.email.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.adresse.id_for_label }}">Adresse</label>
+                    {{ form.adresse }}
+                    {% if form.adresse.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.adresse.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.ville.id_for_label }}">Ville</label>
+                    {{ form.ville }}
+                    {% if form.ville.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.ville.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.code_postal.id_for_label }}">Code postal</label>
+                    {{ form.code_postal }}
+                    {% if form.code_postal.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.code_postal.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                  <div class="form-group">
+                    <label for="{{ form.password1.id_for_label }}">Mot de passe</label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.password1.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    
+                    <!-- Indicateur de force du mot de passe -->
+                    <div class="password-strength-meter">
+                        <div class="password-strength-value" id="passwordStrengthValue"></div>
+                    </div>
+                    
+                    <!-- Exigences du mot de passe -->
+                    <div class="password-requirements" id="passwordRequirements">
+                        <div class="password-requirement" id="lengthRequirement">
+                            <span class="requirement-icon"><i class="fas fa-times"></i></span>
+                            <span class="requirement-text">Au moins 8 caractères</span>
+                        </div>
+                        <div class="password-requirement" id="uppercaseRequirement">
+                            <span class="requirement-icon"><i class="fas fa-times"></i></span>
+                            <span class="requirement-text">Au moins 1 lettre majuscule</span>
+                        </div>
+                        <div class="password-requirement" id="lowercaseRequirement">
+                            <span class="requirement-icon"><i class="fas fa-times"></i></span>
+                            <span class="requirement-text">Au moins 1 lettre minuscule</span>
+                        </div>
+                        <div class="password-requirement" id="numberRequirement">
+                            <span class="requirement-icon"><i class="fas fa-times"></i></span>
+                            <span class="requirement-text">Au moins 1 chiffre</span>
+                        </div>
+                        <div class="password-requirement" id="specialRequirement">
+                            <span class="requirement-icon"><i class="fas fa-times"></i></span>
+                            <span class="requirement-text">Au moins 1 caractère spécial</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.password2.id_for_label }}">Confirmation du mot de passe</label>
+                    {{ form.password2 }}
+                    <div class="password-match-indicator" id="passwordMatchIndicator"></div>
+                    {% if form.password2.errors %}
+                    <ul class="errorlist">
+                        {% for error in form.password2.errors %}
+                        <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                
+                <button type="submit" class="btn-submit">S'inscrire</button>
+            </form>
+        </div>
+        
+        <div class="login-footer">
+            Déjà inscrit? <a href="{% url 'login' %}">Connectez-vous ici</a>
+        </div>
+    </div>
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Appliquer Bootstrap aux champs de formulaire
+            var inputs = document.querySelectorAll('input');
+            inputs.forEach(function(input) {
+                input.classList.add('form-control');
+            });
+            
+            // Récupérer les champs de mot de passe
+            const passwordField = document.getElementById('{{ form.password1.id_for_label }}');
+            const confirmPasswordField = document.getElementById('{{ form.password2.id_for_label }}');
+            const submitButton = document.querySelector('button[type="submit"]');
+            
+            // Récupérer les éléments d'affichage des exigences
+            const lengthRequirement = document.getElementById('lengthRequirement');
+            const uppercaseRequirement = document.getElementById('uppercaseRequirement');
+            const lowercaseRequirement = document.getElementById('lowercaseRequirement');
+            const numberRequirement = document.getElementById('numberRequirement');
+            const specialRequirement = document.getElementById('specialRequirement');
+            const passwordMatchIndicator = document.getElementById('passwordMatchIndicator');
+            const passwordStrengthValue = document.getElementById('passwordStrengthValue');
+            
+            // Fonction pour vérifier le mot de passe et mettre à jour l'interface
+            function validatePassword() {
+                const password = passwordField.value;
+                const confirmPassword = confirmPasswordField.value;
+                
+                // Vérifier les exigences
+                const hasLength = password.length >= 8;
+                const hasUppercase = /[A-Z]/.test(password);
+                const hasLowercase = /[a-z]/.test(password);
+                const hasNumber = /[0-9]/.test(password);
+                const hasSpecial = /[^A-Za-z0-9]/.test(password);
+                
+                // Mettre à jour les indicateurs visuels
+                updateRequirement(lengthRequirement, hasLength);
+                updateRequirement(uppercaseRequirement, hasUppercase);
+                updateRequirement(lowercaseRequirement, hasLowercase);
+                updateRequirement(numberRequirement, hasNumber);
+                updateRequirement(specialRequirement, hasSpecial);
+                
+                // Calculer la force du mot de passe (0-100%)
+                let strength = 0;
+                if (password.length > 0) {
+                    strength += hasLength ? 20 : 0;
+                    strength += hasUppercase ? 20 : 0;
+                    strength += hasLowercase ? 20 : 0;
+                    strength += hasNumber ? 20 : 0;
+                    strength += hasSpecial ? 20 : 0;
+                }
+                
+                // Mettre à jour l'indicateur de force
+                passwordStrengthValue.style.width = strength + '%';
+                
+                // Définir la couleur en fonction de la force
+                if (strength < 40) {
+                    passwordStrengthValue.style.backgroundColor = '#dc3545'; // Rouge (faible)
+                } else if (strength < 80) {
+                    passwordStrengthValue.style.backgroundColor = '#ffc107'; // Jaune (moyen)
+                } else {
+                    passwordStrengthValue.style.backgroundColor = '#28a745'; // Vert (fort)
+                }
+                
+                // Vérifier si les mots de passe correspondent
+                if (confirmPassword.length > 0) {
+                    if (password === confirmPassword) {
+                        passwordMatchIndicator.textContent = 'Les mots de passe correspondent';
+                        passwordMatchIndicator.style.color = '#28a745';
+                    } else {
+                        passwordMatchIndicator.textContent = 'Les mots de passe ne correspondent pas';
+                        passwordMatchIndicator.style.color = '#dc3545';
+                    }
+                } else {
+                    passwordMatchIndicator.textContent = '';
+                }
+            }
+            
+            // Fonction pour mettre à jour l'affichage d'une exigence
+            function updateRequirement(requirementElement, isValid) {
+                const iconElement = requirementElement.querySelector('.requirement-icon i');
+                
+                if (isValid) {
+                    requirementElement.classList.add('valid-requirement');
+                    requirementElement.classList.remove('invalid-requirement');
+                    iconElement.classList.remove('fa-times');
+                    iconElement.classList.add('fa-check');
+                } else {
+                    requirementElement.classList.add('invalid-requirement');
+                    requirementElement.classList.remove('valid-requirement');
+                    iconElement.classList.remove('fa-check');
+                    iconElement.classList.add('fa-times');
+                }
+            }
+            
+            // Écouter les événements de saisie
+            if (passwordField && confirmPasswordField) {
+                passwordField.addEventListener('input', validatePassword);
+                confirmPasswordField.addEventListener('input', validatePassword);
+                
+                // Initialiser la validation
+                validatePassword();
+            }
+        });
+    </script>
+{% endblock %}

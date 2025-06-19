@@ -1,0 +1,16 @@
+django
+scikit-image
+numpy
+tensorflow
+Pillow
+requests
+python-dotenv
+matplotlib
+sentinelhub
+rasterio
+scikit-learn
+torch
+opencv-python
+redis
+joblib
+pandas
