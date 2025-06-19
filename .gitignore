@@ -35,3 +35,18 @@ tmp/
 .git/
 
 floodAI/.git/
+
+Pytorch-UNet-Flood-Segmentation/
+
+nga-deep-learning/
+
+flood_dataset/
+
+FireDataset/
+
+eye-in-sky/
+
+sar_images/
+
+
+unet-sentinel/
