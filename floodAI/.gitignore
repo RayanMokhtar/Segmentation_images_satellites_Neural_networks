@@ -2,6 +2,18 @@
 .env
 .env.*
 
+flood_dataset/SEN12FLOOD/
+FireDataset/raw_data/
+*.tif
+*.tiff
+*.h5
+*.hdf5
+resultats_image/
+sentinelhub_data/
+sortie/
+sentinel_data/
+templatetags/
+sar_images/
 # Ignorer les fichiers système
 __pycache__/
 *.py[cod]

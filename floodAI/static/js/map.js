@@ -542,6 +542,16 @@ async function updatePredictions(lat, lng, weatherData) {
                 const prediction = cnnPrediction.prediction['prediction'];
                 console.log('Objet prediction:', prediction);
                 
+
+                const dateKey = forecast.date.toISOString().split('T')[0];
+                predictionVisualizations[dateKey] = {};
+                // Check if we have visualizations in the response
+                if (cnnPrediction.prediction.files.visualizations) {
+                    predictionVisualizations[dateKey] = cnnPrediction.prediction.files.visualizations;
+                }
+
+                
+
                 // Déterminer la classe de risque basée sur la prédiction
                 let riskClass = 'low';
                 let riskLevel = prediction.risk_level || 'faible';
@@ -560,6 +570,17 @@ async function updatePredictions(lat, lng, weatherData) {
                 // Récupérer les valeurs avec valeurs par défaut
                 const probability = prediction.probability || prediction.flood_percentage || 0;
 
+                // Add visualization button if images exist
+                const hasVisualizations = 
+                    predictionVisualizations[dateKey] && 
+                    (predictionVisualizations[dateKey].input_image || 
+                     predictionVisualizations[dateKey].output_image);
+                
+                const visualizationButton = hasVisualizations ? 
+                    `<button class="btn btn-sm btn-info mt-2" onclick="showPredictionImages('${dateKey}')">
+                        <i class="fas fa-eye"></i> Voir les images
+                     </button>` : '';
+
                 const predHtml = `
                     <div class="risk-item ${riskClass}">
                         <div class="risk-date">${formatDate(forecast.date)}</div>
@@ -572,6 +593,7 @@ async function updatePredictions(lat, lng, weatherData) {
                             </div>
                             <div class="prediction-details">
                                 ${prediction.message || ''}
+                                ${visualizationButton}
                             </div>
                         </div>
                     </div>
@@ -707,10 +729,47 @@ function createNotificationArea() {
     return area;
 }
 
+function showPredictionImages(dateKey) {
+    const visualizations = predictionVisualizations[dateKey];
+    
+    if (!visualizations) {
+        showNotification('Aucune visualisation disponible pour cette date', 'error');
+        return;
+    }
+    
+    // Set the images in the modal
+    if (visualizations.input_image) {
+        document.getElementById('input-image').src = visualizations.input_image;
+        document.getElementById('input-tab').classList.remove('disabled');
+    } else {
+        document.getElementById('input-image').src = '';
+        document.getElementById('input-tab').classList.add('disabled');
+    }
+    
+    if (visualizations.output_image) {
+        document.getElementById('output-image').src = visualizations.output_image;
+        document.getElementById('output-tab').classList.remove('disabled');
+    } else {
+        document.getElementById('output-image').src = '';
+        document.getElementById('output-tab').classList.add('disabled');
+    }
+    
+    // Show the first available tab
+    if (visualizations.input_image) {
+        document.getElementById('input-tab').click();
+    } else if (visualizations.output_image) {
+        document.getElementById('output-tab').click();
+    }
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+    modal.show();
+}
 // Initialisation de la carte au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     initMap();
 });
+
 
 
 

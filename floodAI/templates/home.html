@@ -7,7 +7,24 @@
 {% csrf_token %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.locatecontrol/dist/L.Control.Locate.min.css">
+
+<style>
+    /* Styles for modal images */
+    .modal-body img {
+        max-height: 60vh;
+        object-fit: contain;
+        margin: 0 auto;
+        display: block;
+    }
+
+    .nav-tabs .disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+</style>
+
 {% endblock %}
+
 
 {% block content %}
 
@@ -46,6 +63,37 @@
     </div>
     
     <!-- Conteneur pour les notifications -->
+     <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="imageModalLabel">Visualisation des prédictions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs" id="imageTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="input-tab" data-bs-toggle="tab" data-bs-target="#input-image-tab" type="button" role="tab" aria-controls="input-image" aria-selected="true">Image satellite</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-image-tab" type="button" role="tab" aria-controls="output-image" aria-selected="false">Visualisation prédiction</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-3" id="imageTabContent">
+                        <div class="tab-pane fade show active" id="input-image-tab" role="tabpanel" aria-labelledby="input-tab">
+                            <img id="input-image" class="img-fluid w-100" src="" alt="Image satellite d'entrée">
+                        </div>
+                        <div class="tab-pane fade" id="output-image-tab" role="tabpanel" aria-labelledby="output-tab">
+                            <img id="output-image" class="img-fluid w-100" src="" alt="Visualisation de la prédiction">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="notifications-container"></div>{% endblock %}
 
 {% block extra_js %}
