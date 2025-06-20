@@ -261,7 +261,19 @@ def predict_incremental_with_labels(model, df_initial, scaler, encoder, feats_li
         prob = float(model.predict(X_cur)[0, 0])
         pred_label = int(prob >= 0.5)
         pred_date = df_cur['date'].iloc[-1] + timedelta(days=1)
-        results.append({'date': pred_date, 'prob': prob, 'pred': pred_label})
+        
+        # Récupérer les données météo pour le jour prédit
+        ds_str = pred_date.strftime("%Y-%m-%d")
+        day_weather = {}
+        if 'days' in wx and ds_str in wx['days']:
+            day_data = wx['days'][ds_str]
+            day_weather = {
+                'temp': day_data.get('temp'),
+                'precip': day_data.get('precip', 0),
+                'humidity': day_data.get('humidity')
+            }
+        
+        results.append({'date': pred_date, 'prob': prob, 'pred': pred_label, 'weather': day_weather})
 
         if h < horizon:
             ds_str = pred_date.strftime("%Y-%m-%d")
@@ -324,7 +336,19 @@ def predict_incremental_without_labels(model, df_initial, scaler, encoder, feats
         prob = float(model.predict(X_cur)[0, 0])
         pred_label = int(prob >= 0.5)
         pred_date = df_cur['date'].iloc[-1] + timedelta(days=1)
-        results.append({'date': pred_date, 'prob': prob, 'pred': pred_label})
+        
+        # Récupérer les données météo pour le jour prédit
+        ds_str = pred_date.strftime("%Y-%m-%d")
+        day_weather = {}
+        if 'days' in wx and ds_str in wx['days']:
+            day_data = wx['days'][ds_str]
+            day_weather = {
+                'temp': day_data.get('temp'),
+                'precip': day_data.get('precip', 0),
+                'humidity': day_data.get('humidity')
+            }
+            
+        results.append({'date': pred_date, 'prob': prob, 'pred': pred_label, 'weather': day_weather})
         
         if h < horizon:
             ds_str = pred_date.strftime("%Y-%m-%d")
@@ -563,7 +587,8 @@ def predict_flood_lstm(lat, lon, target_date, horizon=DEFAULT_H, use_cnn_labels=
                     'date': row['date'].strftime('%d/%m/%Y'),
                     'probability': round(row['prob'] * 100, 2),
                     'is_flooded': bool(row['pred']),
-                    'risk_level': 'élevé' if row['prob'] >= 0.5 else 'faible'
+                    'risk_level': 'élevé' if row['prob'] >= 0.5 else 'faible',
+                    'weather': row.get('weather', {})
                 }
                 for _, row in preds.iterrows()
             ],

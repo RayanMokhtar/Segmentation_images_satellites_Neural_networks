@@ -208,6 +208,13 @@ async function updatePredictions(lat, lng) {
                 let cls = 'low', lvl = c.risk_level || 'Faible';
                 if (lvl.toLowerCase().includes('élevé')) { cls = 'high'; lvl = 'Élevé'; }
                 else if (lvl.toLowerCase().includes('modéré')) { cls = 'medium'; lvl = 'Modéré'; }
+                
+                const weather_html = c.weather ? `
+                    <div>Temp: ${c.weather.temp.toFixed(1)}°C</div>
+                    <div>Précip: ${c.weather.precip.toFixed(1)}mm</div>
+                    <div>Humidité: ${c.weather.humidity.toFixed(0)}%</div>
+                ` : '';
+
                 riskLevels.innerHTML += `
                   <div class="risk-item ${cls}">
                     <div class="risk-date">${c.date} (aujourd'hui)</div>
@@ -215,6 +222,7 @@ async function updatePredictions(lat, lng) {
                       <div class="risk-level">Risque d'inondation : ${lvl}</div>
                       <div class="weather-info">
                         <div>Probabilité : ${c.flood_percentage}%</div>
+                        ${weather_html}
                         <div>Modèle : CNN</div>
                       </div>
                     </div>
@@ -227,6 +235,13 @@ async function updatePredictions(lat, lng) {
                     let cls = 'low', lvl = l.risk_level || 'Faible';
                     if (lvl.toLowerCase().includes('élevé')) { cls = 'high'; lvl = 'Élevé'; }
                     else if (lvl.toLowerCase().includes('modéré')) { cls = 'medium'; lvl = 'Modéré'; }
+                    
+                    const weather_html = l.weather ? `
+                        <div>Temp: ${l.weather.temp.toFixed(1)}°C</div>
+                        <div>Précip: ${l.weather.precip.toFixed(1)}mm</div>
+                        <div>Humidité: ${l.weather.humidity.toFixed(0)}%</div>
+                    ` : '';
+
                     riskLevels.innerHTML += `
                       <div class="risk-item ${cls}">
                         <div class="risk-date">${l.date}</div>
@@ -235,6 +250,7 @@ async function updatePredictions(lat, lng) {
                           <div class="weather-info">
                             <div>Probabilité : ${l.probability}%</div>
                             <div>Inondation : ${l.is_flooded ? 'Oui' : 'Non'}</div>
+                            ${weather_html}
                             <div>Modèle : LSTM</div>
                           </div>
                         </div>

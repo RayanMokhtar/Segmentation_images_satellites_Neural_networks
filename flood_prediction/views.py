@@ -847,8 +847,8 @@ def get_combined_prediction(request):
                         encoded_input = base64.b64encode(image_file.read()).decode('utf-8')
                         cnn_result['visualizations']['input_image'] = f"data:image/tiff;base64,{encoded_input}"
             
-            # 2. Prédiction LSTM pour les jours J+1, J+2, J+3
-            print(f"Prédiction LSTM pour ({lat}, {lng}) - jours J+1 à J+3")
+            # 2. Prédiction LSTM pour les jours J, J+1, J+2
+            print(f"Prédiction LSTM pour ({lat}, {lng}) - jours J à J+2")
             # Utiliser la date d'aujourd'hui pour la prédiction LSTM
             lstm_result = predict_flood_lstm(
                 lat=lat,
@@ -863,6 +863,11 @@ def get_combined_prediction(request):
                     'error': f"Erreur lors de la prédiction LSTM: {lstm_result.get('error', 'Erreur inconnue')}"
                 }, status=500)
             
+            # Extraire les informations météo pour le jour J (CNN)
+            weather_j = {}
+            if lstm_result.get('forecast_days') and len(lstm_result['forecast_days']) > 0:
+                weather_j = lstm_result['forecast_days'][0].get('weather', {})
+
             # 3. Combiner les résultats
             combined_result = {
                 'success': True,
@@ -870,7 +875,8 @@ def get_combined_prediction(request):
                     'date': date_du_jour.strftime('%d/%m/%Y'),
                     'is_flooded': cnn_result['prediction']['is_flooded'],
                     'flood_percentage': cnn_result['prediction']['flood_percentage'],
-                    'risk_level': cnn_result['prediction']['risk_level']
+                    'risk_level': cnn_result['prediction']['risk_level'],
+                    'weather': weather_j
                 },
                 'lstm_predictions': lstm_result.get('forecast_days', []),
                 'visualizations': cnn_result.get('visualizations', {}),
