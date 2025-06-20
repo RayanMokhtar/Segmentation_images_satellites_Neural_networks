@@ -16,6 +16,8 @@ import random
 from datetime import datetime, date, timedelta
 from .fake_prediction import predict_flood , convertir_tif_avec_rasterio
 from .fake_prediction import predict_flood_with_unet
+from .fake_prediction import predict_flood
+from .lstm_prediction import predict_flood_lstm
 import base64
 import os
 
@@ -508,12 +510,10 @@ def segmentation(request):
     
     return render(request, 'segmentation.html', context)
 
-
-
 # Vue pour la page de prédiction LSTM
 def lstm(request):
-    import random
     from datetime import datetime
+    from .lstm_prediction import predict_flood_lstm
     
     context = {
         'model_type': request.POST.get('model_type', 'LSTM standard')
@@ -528,40 +528,41 @@ def lstm(request):
         
         # Validation basique
         if date_prediction and latitude and longitude:
-            # Génération d'un résultat de prédiction aléatoire (0-100%)
-            prediction_value = random.randint(0, 100)
-            
-            # Déterminer la couleur du résultat et le message
-            if prediction_value > 50:
-                risk_level = "élevé"
-                color = "red"
-            elif prediction_value == 50:
-                risk_level = "modéré"
-                color = "yellow"
-            else:
-                risk_level = "faible"
-                color = "green"
-                
-            # Formatage de la date pour l'affichage
             try:
-                # Essayer de parser la date au format YYYY-MM-DD
-                date_obj = datetime.strptime(date_prediction, '%Y-%m-%d')
-                formatted_date = date_obj.strftime('%d/%m/%Y')
-            except ValueError:
-                # Si erreur, utiliser la valeur telle quelle
-                formatted_date = date_prediction
+                # Conversion des coordonnées en flottants
+                lat = float(latitude)
+                lon = float(longitude)
                 
-            # Construction du contexte pour le template
-            context.update({
-                'prediction_done': True,
-                'prediction_value': prediction_value,
-                'risk_level': risk_level,
-                'color': color,
-                'date_prediction': formatted_date,
-                'latitude': latitude,
-                'longitude': longitude,
-                'model_type': model_type
-            })
+                # Déterminer si on utilise le modèle avec labels CNN
+                use_cnn_labels = (model_type == 'LSTM avec CNN')
+                
+                # Appeler notre fonction de prédiction LSTM
+                result = predict_flood_lstm(
+                    lat=lat,
+                    lon=lon,
+                    target_date=date_prediction,
+                    horizon=5,  # 5 jours de prédiction
+                    use_cnn_labels=use_cnn_labels
+                )
+                
+                if result['success']:
+                    # Utiliser directement les résultats de la prédiction
+                    context.update(result)
+                else:
+                    # En cas d'erreur, afficher un message
+                    context.update({
+                        'error': result.get('error', 'Une erreur est survenue lors de la prédiction.')
+                    })
+            except ValueError:
+                context.update({
+                    'error': 'Les coordonnées doivent être des nombres valides.'
+                })
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                context.update({
+                    'error': f'Erreur inattendue: {str(e)}'
+                })
     
     return render(request, 'lstm.html', context)
 
@@ -730,14 +731,25 @@ def verify_email(request, token):
             first_name=verification.first_name,
             last_name=verification.last_name,
         )
-        
-        # Créer le profil utilisateur avec les informations d'adresse
-        UserProfile.objects.create(
-            user=user,
-            adresse=verification.adresse,
-            ville=verification.ville,
-            code_postal=verification.code_postal,
-        )
+          # Créer le profil utilisateur avec les informations d'adresse
+        try:
+            UserProfile.objects.create(
+                user=user,
+                adresse=verification.adresse,
+                ville=verification.ville,
+                code_postal=verification.code_postal,
+            )
+        except Exception as profile_error:
+            # Si le profil existe déjà, on le met à jour
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            if not created:
+                profile.adresse = verification.adresse
+                profile.ville = verification.ville
+                profile.code_postal = verification.code_postal
+                profile.save()
+            else:
+                # Si on a une autre erreur, on la propage
+                raise profile_error
         
         # Marquer la vérification comme effectuée
         verification.is_verified = True
@@ -884,5 +896,115 @@ def get_cnn_prediction(request):
         except Exception as e:
             print(f"Erreur lors de la prédiction CNN: {str(e)}")
             return JsonResponse({'error générale lors de la prédiction cnn ': str(e)}, status=500)
+
+    return JsonResponse({'error': 'Méthode non autorisée'}, status=405)
+
+def get_combined_prediction(request):
+    """
+    Fonction qui combine les prédictions CNN et LSTM pour fournir une prévision
+    d'inondation sur le jour J (CNN) et les jours J+1, J+2, J+3 (LSTM)
+    """
+    if request.method == 'POST':
+        try:
+            # Récupérer et parser les données d'entrée
+            input_data = json.loads(request.POST.get('input_data', '{}'))
+            
+            lat = input_data.get('latitude')
+            lng = input_data.get('longitude')
+            
+            # Valider les entrées
+            if not all([lat, lng]):
+                return JsonResponse({'error': 'Latitude et longitude requises'}, status=400)
+            
+            # Convertir en float
+            lat = float(lat)
+            lng = float(lng)
+            
+            # Date actuelle pour la prédiction
+            date_du_jour = datetime.now()
+            date_debut = date_du_jour - timedelta(days=10)
+            
+            # 1. Prédiction CNN pour le jour J
+            print(f"Prédiction CNN pour ({lat}, {lng}) - jour J")
+            cnn_result = predict_flood(
+                longitude=lng,
+                latitude=lat,
+                size_km=5,  # Rayon de 5 km
+                start_date=date_debut.strftime('%Y-%m-%d'),
+                end_date=date_du_jour.strftime('%Y-%m-%d')
+            )
+            
+            if not cnn_result.get('success', False):
+                return JsonResponse({
+                    'error': f"Erreur lors de la prédiction CNN: {cnn_result.get('error', 'Erreur inconnue')}"
+                }, status=500)
+            
+            # Encoder les images en base64 si elles existent
+            if 'files' in cnn_result:
+                visualization_path = cnn_result['files'].get('output_visualization')
+                input_image_path = cnn_result['files'].get('input_image')
+                
+                cnn_result['visualizations'] = {}
+                
+                if visualization_path and os.path.exists(visualization_path):
+                    with open(visualization_path, "rb") as image_file:
+                        encoded_visualization = base64.b64encode(image_file.read()).decode('utf-8')
+                        cnn_result['visualizations']['output_image'] = f"data:image/png;base64,{encoded_visualization}"
+                
+                if input_image_path and os.path.exists(input_image_path):
+                    with open(input_image_path, "rb") as image_file:
+                        encoded_input = base64.b64encode(image_file.read()).decode('utf-8')
+                        cnn_result['visualizations']['input_image'] = f"data:image/tiff;base64,{encoded_input}"
+            
+            # 2. Prédiction LSTM pour les jours J, J+1, J+2
+            print(f"Prédiction LSTM pour ({lat}, {lng}) - jours J à J+2")
+            # Utiliser la date d'aujourd'hui pour la prédiction LSTM
+            lstm_result = predict_flood_lstm(
+                lat=lat,
+                lon=lng,
+                target_date=date_du_jour.strftime('%Y-%m-%d'),
+                horizon=3,  # 3 jours de prédiction
+                use_cnn_labels=True  # Utiliser les labels CNN
+            )
+            
+            if not lstm_result.get('success', False):
+                return JsonResponse({
+                    'error': f"Erreur lors de la prédiction LSTM: {lstm_result.get('error', 'Erreur inconnue')}"
+                }, status=500)
+            
+            # Extraire les informations météo pour le jour J (CNN)
+            weather_j = {}
+            if lstm_result.get('forecast_days') and len(lstm_result['forecast_days']) > 0:
+                weather_j = lstm_result['forecast_days'][0].get('weather', {})
+
+            # 3. Combiner les résultats
+            combined_result = {
+                'success': True,
+                'cnn_prediction': {
+                    'date': date_du_jour.strftime('%d/%m/%Y'),
+                    'is_flooded': cnn_result['prediction']['is_flooded'],
+                    'flood_percentage': cnn_result['prediction']['flood_percentage'],
+                    'risk_level': cnn_result['prediction']['risk_level'],
+                    'weather': weather_j
+                },
+                'lstm_predictions': lstm_result.get('forecast_days', []),
+                'visualizations': cnn_result.get('visualizations', {}),
+                'city_name': lstm_result.get('city_name', 'Région inconnue'),
+                'coordinates': {
+                    'latitude': lat,
+                    'longitude': lng
+                },
+                'plot_base64': lstm_result.get('plot_base64')  # Graphique de prédiction LSTM
+            }
+            
+            return JsonResponse({'prediction': combined_result})
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Format de données invalide'}, status=400)
+        except Exception as e:
+            print(f"Erreur lors de la prédiction combinée: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({'error': f'Erreur lors de la prédiction: {str(e)}'}, status=500)
 
     return JsonResponse({'error': 'Méthode non autorisée'}, status=405)

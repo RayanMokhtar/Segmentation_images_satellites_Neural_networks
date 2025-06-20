@@ -136,6 +136,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    margin-top: 16px;
+    margin-bottom: 16px;
 }
 
 .risk-item {
@@ -143,6 +145,14 @@ body {
     border-radius: 8px;
     padding: 16px;
     border: 1px solid var(--border-color);
+    animation: fadeIn 0.3s ease;
+    animation-fill-mode: both;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.risk-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .risk-item.high {
@@ -648,10 +658,12 @@ body {
 #location-info {
     background-color: #f8f9fa;
     border-radius: 8px;
-    padding: 12px 16px;
+    padding: 16px;
+    margin-top: 8px;
     margin-bottom: 16px;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     animation: fadeIn 0.3s ease;
+    position: relative;
 }
 
 .location-header h3 {
@@ -854,6 +866,10 @@ body {
     background-color: #ff4d4d;
 }
 
+.prediction-circle.orange {
+    background-color: #ff9933;
+}
+
 .prediction-circle.yellow {
     background-color: #ffcc00;
     color: #333;
@@ -951,3 +967,36 @@ body {
     margin-right: 8px;
     color: var(--primary-color);
 }
+
+/* Styles pour les éléments de visualisation */
+.prediction-visualization {
+    margin-top: 16px;
+    text-align: center;
+}
+
+.lstm-plot {
+    margin-top: 16px;
+    text-align: center;
+}
+
+/* Style pour les boutons de visualisation */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Animation pour les panels de risque */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.risk-item {
+    animation: fadeIn 0.3s ease;
+    animation-fill-mode: both;
+}
+
+.risk-item:nth-child(1) { animation-delay: 0.1s; }
+.risk-item:nth-child(2) { animation-delay: 0.2s; }
+.risk-item:nth-child(3) { animation-delay: 0.3s; }
+.risk-item:nth-child(4) { animation-delay: 0.4s; }

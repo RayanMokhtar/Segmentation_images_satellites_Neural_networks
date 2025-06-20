@@ -17,7 +17,7 @@ urlpatterns = [
     path('unsubscribe-city/<int:abonnement_id>/', views.unsubscribe_city, name='unsubscribe_city'),
     path('segmentation/', views.segmentation, name='segmentation'),
     path('lstm/', views.lstm, name='lstm'),
-    path('send-city-alert/', views.send_city_alert, name='send_city_alert'),
-    path('api/get-cnn-prediction/', views.get_cnn_prediction, name='get_cnn_prediction'),
+    path('send-city-alert/', views.send_city_alert, name='send_city_alert'),    path('api/get-cnn-prediction/', views.get_cnn_prediction, name='get_cnn_prediction'),
+    path('api/combined-prediction/', views.get_combined_prediction, name='get_combined_prediction'),
 
 ]

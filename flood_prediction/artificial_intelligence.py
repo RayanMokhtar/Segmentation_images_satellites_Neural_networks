@@ -688,66 +688,66 @@ def preprocess_sar_image_in_memory(image, output_dir=None, visualize=True):
     print("\n✅ Prétraitement terminé avec succès!")
     return tensor_image
 
-def get_combined_prediction(lat, lon):
-    """
-    Exécute les modèles CNN et LSTM pour obtenir une prédiction combinée.
-    """
-    # ... (le reste de la fonction reste inchangé)
+# def get_combined_prediction(lat, lon):
+#     """
+#     Exécute les modèles CNN et LSTM pour obtenir une prédiction combinée.
+#     """
+#     # ... (le reste de la fonction reste inchangé)
 
 
-# --- NOUVELLE FONCTION ---
-def get_cnn_predictions_for_period(lat, lon, start_date, end_date):
-    """
-    Exécute le modèle CNN pour chaque jour d'une période donnée pour obtenir des labels.
+# # --- NOUVELLE FONCTION ---
+# def get_cnn_predictions_for_period(lat, lon, start_date, end_date):
+#     """
+#     Exécute le modèle CNN pour chaque jour d'une période donnée pour obtenir des labels.
 
-    Args:
-        lat (float): Latitude.
-        lon (float): Longitude.
-        start_date (datetime): Date de début.
-        end_date (datetime): Date de fin.
+#     Args:
+#         lat (float): Latitude.
+#         lon (float): Longitude.
+#         start_date (datetime): Date de début.
+#         end_date (datetime): Date de fin.
 
-    Returns:
-        list: Une liste de prédictions (0 ou 1) pour chaque jour de la période.
-    """
-    from .sar_downloader import download_sar_images
-    from .artificial_intelligence import get_cnn_prediction
-    from datetime import timedelta
-    import numpy as np
+#     Returns:
+#         list: Une liste de prédictions (0 ou 1) pour chaque jour de la période.
+#     """
+#     from .sar_downloader import download_sar_images
+#     from .artificial_intelligence import get_cnn_prediction
+#     from datetime import timedelta
+#     import numpy as np
 
-    num_days = (end_date - start_date).days + 1
+#     num_days = (end_date - start_date).days + 1
     
-    try:
-        # Le downloader peut retourner des images pour une plage.
-        # On va mapper les images aux dates.
-        image_paths, dates = download_sar_images(lat, lon, start_date, end_date)
+#     try:
+#         # Le downloader peut retourner des images pour une plage.
+#         # On va mapper les images aux dates.
+#         image_paths, dates = download_sar_images(lat, lon, start_date, end_date)
         
-        if not image_paths:
-            print("Aucune image SAR trouvée pour la période, retourne des labels nuls.")
-            return [0] * num_days
+#         if not image_paths:
+#             print("Aucune image SAR trouvée pour la période, retourne des labels nuls.")
+#             return [0] * num_days
 
-        # Créer un dictionnaire de prédictions par date
-        date_to_prediction = {}
-        for img_path, img_date in zip(image_paths, dates):
-            # Utiliser la fonction de prédiction CNN existante
-            # Note: get_cnn_prediction est supposée retourner un dict avec 'cnn_risk', 'cnn_proba'
-            cnn_result = get_cnn_prediction(lat, lon, image_path=img_path)
+#         # Créer un dictionnaire de prédictions par date
+#         date_to_prediction = {}
+#         for img_path, img_date in zip(image_paths, dates):
+#             # Utiliser la fonction de prédiction CNN existante
+#             # Note: get_cnn_prediction est supposée retourner un dict avec 'cnn_risk', 'cnn_proba'
+#             cnn_result = get_cnn_prediction(lat, lon, image_path=img_path)
             
-            # Convertir le risque en label binaire (0 ou 1)
-            # On considère 'faible' comme 0, et tout le reste comme 1.
-            is_flood = 1 if cnn_result.get('cnn_risk', 'faible') != 'faible' else 0
-            date_to_prediction[img_date.strftime('%Y-%m-%d')] = is_flood
+#             # Convertir le risque en label binaire (0 ou 1)
+#             # On considère 'faible' comme 0, et tout le reste comme 1.
+#             is_flood = 1 if cnn_result.get('cnn_risk', 'faible') != 'faible' else 0
+#             date_to_prediction[img_date.strftime('%Y-%m-%d')] = is_flood
 
-        # Construire la liste finale de labels pour toute la période
-        all_labels = []
-        current_date = start_date
-        while current_date <= end_date:
-            date_str = current_date.strftime('%Y-%m-%d')
-            # Utiliser la prédiction si disponible, sinon 0 (pas d'inondation)
-            all_labels.append(date_to_prediction.get(date_str, 0))
-            current_date += timedelta(days=1)
+#         # Construire la liste finale de labels pour toute la période
+#         all_labels = []
+#         current_date = start_date
+#         while current_date <= end_date:
+#             date_str = current_date.strftime('%Y-%m-%d')
+#             # Utiliser la prédiction si disponible, sinon 0 (pas d'inondation)
+#             all_labels.append(date_to_prediction.get(date_str, 0))
+#             current_date += timedelta(days=1)
             
-        return all_labels
+#         return all_labels
 
-    except Exception as e:
-        print(f"Erreur durant la prédiction CNN pour la période : {e}. Retourne des labels nuls.")
-        return [0] * num_days
+#     except Exception as e:
+#         print(f"Erreur durant la prédiction CNN pour la période : {e}. Retourne des labels nuls.")
+#         return [0] * num_days

@@ -1,6 +1,7 @@
 // Initialisation de la carte
 let map = null;
 let selectedMarker = null;
+let selectedLocation = null;
 
 // Fonction pour formater la date en français
 function formatDate(date) {
@@ -8,110 +9,77 @@ function formatDate(date) {
     return date.toLocaleDateString('fr-FR', options);
 }
 
-// Fonction pour récupérer les données météo via la vue Django
+// Récupérer le CSRF token
+function getCsrfToken() {
+    return document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1] || '';
+}
+
+// Appels API
 async function fetchWeatherData(lat, lng) {
     try {
-        const response = await fetch(`/api/weather/?lat=${lat}&lng=${lng}`);
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Erreur lors de la récupération des données météo:', error);
+        const res = await fetch(`/api/weather/?lat=${lat}&lng=${lng}`);
+        return await res.json();
+    } catch (err) {
+        console.error('Erreur météo :', err);
         return null;
     }
 }
 
-async function fetchCnnPredictions(lat, lng, date) {
+async function fetchCombinedPredictions(lat, lng) {
     try {
-        // Préparer les données pour l'envoi
         const formData = new FormData();
-        formData.append('input_data', JSON.stringify({
-            latitude: lat,
-            longitude: lng,
-        }));
-
-        // Récupérer le token CSRF
-        const csrfToken = getCsrfToken();
-
-        // Envoyer la requête au backend
-        const response = await fetch('/api/get-cnn-prediction/', {
+        formData.append('input_data', JSON.stringify({ latitude: lat, longitude: lng }));
+        const res = await fetch('/api/combined-prediction/', {
             method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken
-            },
+            headers: { 'X-CSRFToken': getCsrfToken() },
             body: formData
         });
-
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        const data = await response.json(); 
-        console.log('Prédictions CNN récupérées:', data);
-        return data;
-        
-    } catch (error) {
-        console.error('Erreur lors de la récupération des prédictions CNN:', error);
+        return await res.json();
+    } catch (err) {
+        console.error('Erreur prédictions combinées :', err);
         return null;
     }
 }
-// Fonction pour récupérer les informations de lieu via la vue Django
+
 async function fetchLocationInfo(lat, lng) {
     try {
-        const response = await fetch(`/api/location/?lat=${lat}&lng=${lng}`);
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Erreur lors de la récupération des informations de lieu:', error);
+        const res = await fetch(`/api/location/?lat=${lat}&lng=${lng}`);
+        return await res.json();
+    } catch (err) {
+        console.error('Erreur location :', err);
         return null;
     }
 }
 
-// Fonction d'initialisation de la carte
+// Initialisation de Leaflet
 function initMap() {
-    if (map !== null) {
-        map.remove(); // Supprime la carte existante si elle existe
-    }
+    if (map) return;
 
-    // Création de la carte
     map = L.map('map', {
         zoomControl: false,
         attributionControl: true,
-        maxBounds: [[-90, -180], [90, 180]], // Limites de la carte
-        maxBoundsViscosity: 1.0, // Force avec laquelle la carte reste dans les limites
-        minZoom: 2, // Zoom minimum pour éviter la duplication
-        worldCopyJump: false // Désactive la duplication de la carte
+        maxBounds: [[-90, -180], [90, 180]],
+        maxBoundsViscosity: 1.0,
+        minZoom: 2,
+        worldCopyJump: false
     }).setView([46.603354, 1.888334], 6);
 
-    // Ajout du fond de carte OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19,
-        noWrap: true, // Empêche la duplication horizontale des tuiles
-        bounds: [[-90, -180], [90, 180]] // Limites des tuiles
+        noWrap: true,
+        bounds: [[-90, -180], [90, 180]]
     }).addTo(map);
 
-    // Ajout du contrôle de zoom personnalisé
-    const zoomControl = L.control.zoom({
-        position: 'topleft',
-        zoomInText: '+',
-        zoomOutText: '−'
-    }).addTo(map);
+    L.control.zoom({ position: 'topleft', zoomInText: '+', zoomOutText: '−' }).addTo(map);
 
-    // Configuration du contrôle de localisation
-    const locateControl = L.control.locate({
+    L.control.locate({
         position: 'topleft',
         icon: 'fa fa-location-crosshairs',
-        iconLoading: 'fa fa-spinner fa-spin',
-        strings: {
-            title: "Ma position"
-        },
-        locateOptions: {
-            enableHighAccuracy: true,
-            maxZoom: 15
-        },
         flyTo: true,
-        showCompass: false,
-        showPopup: false,
-        markerClass: L.Marker,
         markerStyle: {
             icon: L.divIcon({
                 className: 'location-marker',
@@ -122,48 +90,30 @@ function initMap() {
         }
     }).addTo(map);
 
-    // Gestionnaire d'événements pour le clic sur la carte
-    map.on('click', function(e) {
-        selectLocation(e.latlng.lat, e.latlng.lng);
-    });
+    map.on('click', e => selectLocation(e.latlng.lat, e.latlng.lng));
 
-    // Localiser l'utilisateur au chargement
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            
-            // Centrer la carte sur la position de l'utilisateur
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const { latitude: lat, longitude: lng } = pos.coords;
             map.setView([lat, lng], 13);
-            
-            // Sélectionner la position de l'utilisateur
             selectLocation(lat, lng);
-        }, function(error) {
-            console.log("Erreur de géolocalisation:", error);
         });
     }
-    
-    // Ajouter l'événement click au bouton de prédiction
-    document.getElementById('predict-button').addEventListener('click', ()=> {
-        console.log("Bouton de prédiction cliqué");
-        predictRisks();
-    });
+
+    document.getElementById('predict-button')
+        .addEventListener('click', () => predictRisks());
 }
 
-
+// Sélection d'un point sur la carte
 async function selectLocation(lat, lng) {
-    // Supprime l'ancien marqueur s'il existe
-    if (selectedMarker) {
-        map.removeLayer(selectedMarker);
-    }
+    // supprime ancien marqueur
+    if (selectedMarker) map.removeLayer(selectedMarker);
 
-    // Masquer le message de guidance utilisateur quand une région est cliquée
-    const userGuidance = document.getElementById('user-guidance');
-    if (userGuidance) {
-        userGuidance.style.display = 'none';
-    }
+    // masque guidance
+    const ug = document.getElementById('user-guidance');
+    if (ug) ug.style.display = 'none';
 
-    // Crée un nouveau marqueur avec une icône PNG
+    // nouveau marker
     selectedMarker = L.marker([lat, lng], {
         icon: L.divIcon({
             className: 'location-marker',
@@ -172,547 +122,282 @@ async function selectLocation(lat, lng) {
             iconAnchor: [16, 32]
         })
     }).addTo(map);
-    
-    // Stocker les coordonnées sélectionnées
+
     selectedLocation = { lat, lng };
 
-    // Créer ou récupérer le conteneur pour les infos de localisation et afficher un indicateur de chargement
-    let locationInfoDiv = document.getElementById('location-info');
-    if (!locationInfoDiv) {
+    // container location-info
+    let locDiv = document.getElementById('location-info');
+    if (!locDiv) {
         const sidebar = document.querySelector('.sidebar');
-        locationInfoDiv = document.createElement('div');
-        locationInfoDiv.id = 'location-info';
-        sidebar.insertBefore(locationInfoDiv, sidebar.firstChild);
+        locDiv = document.createElement('div');
+        locDiv.id = 'location-info';
+        sidebar.insertBefore(locDiv, sidebar.firstChild);
     }
-    
-    locationInfoDiv.innerHTML = `
+    locDiv.innerHTML = `
         <div class="location-header">
             <h3>Lieu sélectionné</h3>
             <div class="loading-location">
-                <span class="spinner"></span> Recherche de la localité...
+                <span class="spinner"></span> Recherche de la localité…
             </div>
-        </div>
-    `;
+        </div>`;
 
-    // Effacer les anciennes prédictions
-    document.querySelector('.risk-levels').innerHTML = '';
-    
-    // Afficher le bouton de prédiction
-    document.getElementById('prediction-button-container').style.display = 'block';
-    
-    // Récupérer les informations de localisation via Nominatim
-    fetchLocationInfo(lat, lng)
-        .then(locationInfo => {
-            if (locationInfo) {
-                updateLocationInfo(locationInfo);
-            }
-        })
-        .catch(error => {
-            console.error("Erreur lors de la récupération des données de localisation:", error);
-            // Afficher un message simple en cas d'échec
-            locationInfoDiv.innerHTML = `
-                <div class="location-header">
-                    <h3>Lieu sélectionné</h3>
-                    <div class="location-name">Coordonnées: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
-                </div>
-            `;
-        });
+    // afficher le bouton de prédiction
+    const btnWrapper = document.getElementById('prediction-button-container');
+    if (btnWrapper) btnWrapper.style.display = 'block';
+
+    // Utiliser l'élément risk-levels existant dans le HTML
+    const riskLevels = document.querySelector('.sidebar .risk-levels');
+    if (riskLevels) {
+        riskLevels.innerHTML = '';
+        riskLevels.style.display = 'none';
+    }
+
+    // récupérer et afficher le nom de la ville
+    try {
+        const info = await fetchLocationInfo(lat, lng);
+        if (info) updateLocationInfo(info);
+    } catch {
+        locDiv.innerHTML = `
+          <div class="location-header">
+            <h3>Lieu sélectionné</h3>
+            <div class="location-name">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+          </div>`;
+    }
 }
 
-
+// Quand on clique sur "Prédire les risques"
 async function predictRisks() {
     if (!selectedLocation) {
-        showNotification('Veuillez d\'abord sélectionner un lieu sur la carte.', 'error');
+        showNotification('Veuillez d\'abord sélectionner un lieu.', 'error');
         return;
     }
-    
-    // Cacher le bouton de prédiction pendant le chargement
     document.getElementById('prediction-button-container').style.display = 'none';
-    
-    // Afficher l'indicateur de chargement
     document.getElementById('prediction-loading').style.display = 'block';
-    
+
     try {
-        // Récupérer les données météo pour cette localisation
-        const weatherData = await fetchWeatherData(selectedLocation.lat, selectedLocation.lng);
-        
-        if (!weatherData) {
-            throw new Error('Impossible de récupérer les données météo');
-        }
-        
-        // Effectuer les prédictions
-        await updatePredictions(selectedLocation.lat, selectedLocation.lng, weatherData);
-        
-    } catch (error) {
-        console.error('Erreur lors de la prédiction des risques:', error);
-        showNotification('Une erreur est survenue lors du calcul des prédictions.', 'error');
+        const weather = await fetchWeatherData(selectedLocation.lat, selectedLocation.lng);
+        if (!weather) throw new Error();
+        await updatePredictions(selectedLocation.lat, selectedLocation.lng);
+    } catch {
+        showNotification('Erreur lors du calcul des prédictions.', 'error');
     } finally {
-        // Cacher l'indicateur de chargement
         document.getElementById('prediction-loading').style.display = 'none';
-        
-        // Réafficher le bouton de prédiction
         document.getElementById('prediction-button-container').style.display = 'block';
     }
 }
 
-// Fonction pour créer un marqueur
-async function createMarker(lat, lng) {
-    // Supprime l'ancien marqueur s'il existe
-    if (selectedMarker) {
-        map.removeLayer(selectedMarker);
-    }
-
-    // Masquer le message de guidance utilisateur quand une région est cliquée
-    const userGuidance = document.getElementById('user-guidance');
-    if (userGuidance) {
-        userGuidance.style.display = 'none';
-    }
-
-    // Crée un nouveau marqueur avec une icône PNG
-    selectedMarker = L.marker([lat, lng], {
-        icon: L.divIcon({
-            className: 'location-marker',
-            html: '<img src="/static/images/location-marker.png" alt="Location marker">',
-            iconSize: [32, 32],
-            iconAnchor: [16, 32]
-        })
-    }).addTo(map);
-
-    // Créer ou récupérer le conteneur pour les infos de localisation et afficher un indicateur de chargement
-    let locationInfoDiv = document.getElementById('location-info');
-    if (!locationInfoDiv) {
-        const sidebar = document.querySelector('.sidebar');
-        locationInfoDiv = document.createElement('div');
-        locationInfoDiv.id = 'location-info';
-        sidebar.insertBefore(locationInfoDiv, sidebar.firstChild);
-    }
-    
-    locationInfoDiv.innerHTML = `
-        <div class="location-header">
-            <h3>Lieu sélectionné</h3>
-            <div class="loading-location">
-                <span class="spinner"></span> Recherche de la localité...
-            </div>
-        </div>
-    `;
-
-    // Met à jour les prévisions météo immédiatement
-    updatePredictions(lat, lng);
-    
-    // Récupérer les informations de localisation via Nominatim en parallèle
-    fetchLocationInfo(lat, lng)
-        .then(locationInfo => {
-            if (locationInfo) {
-                updateLocationInfo(locationInfo);
-            }
-        })
-        .catch(error => {
-            console.error("Erreur lors de la récupération des données de localisation:", error);
-            // Afficher un message simple en cas d'échec
-            locationInfoDiv.innerHTML = `
-                <div class="location-header">
-                    <h3>Lieu sélectionné</h3>
-                    <div class="location-name">Coordonnées: ${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
-                </div>
-            `;
-        });
-}
-
-// Styles pour les zones de risque
-const riskStyles = {
-    high: {
-        color: '#d93025',
-        fillColor: '#d93025',
-        fillOpacity: 0.2,
-        weight: 2
-    },
-    medium: {
-        color: '#f29900',
-        fillColor: '#f29900',
-        fillOpacity: 0.2,
-        weight: 2
-    },
-    low: {
-        color: '#188038',
-        fillColor: '#188038',
-        fillOpacity: 0.2,
-        weight: 2
-    }
-};
-
-// Fonction pour mettre à jour les prévisions
+// Met à jour le HTML des prédictions
 async function updatePredictions(lat, lng) {
-    const weatherData = await fetchWeatherData(lat, lng);
-    
-    if (!weatherData) {
-        console.error('Impossible de récupérer les données météo');
-        return;
+    const riskLevels = document.querySelector('.sidebar .risk-levels');
+    if (!riskLevels) return console.error('.risk-levels introuvable');
+
+    // on l'affiche là où il est
+    riskLevels.style.display = 'block';
+    riskLevels.innerHTML = '<div class="loading-predictions"><span class="spinner"></span> Chargement des prédictions…</div>';
+
+    // essai combiné CNN+LSTM
+    try {
+        const comb = await fetchCombinedPredictions(lat, lng);
+        if (comb?.prediction) {
+            const p = comb.prediction;
+            riskLevels.innerHTML = '';
+
+            // CNN (J)
+            if (p.cnn_prediction) {
+                const c = p.cnn_prediction;
+                let cls = 'low', lvl = c.risk_level || 'Faible';
+                if (lvl.toLowerCase().includes('élevé')) { cls = 'high'; lvl = 'Élevé'; }
+                else if (lvl.toLowerCase().includes('modéré')) { cls = 'medium'; lvl = 'Modéré'; }
+                
+                const weather_html = c.weather ? `
+                    <div>Temp: ${c.weather.temp.toFixed(1)}°C</div>
+                    <div>Précip: ${c.weather.precip.toFixed(1)}mm</div>
+                    <div>Humidité: ${c.weather.humidity.toFixed(0)}%</div>
+                ` : '';
+
+                riskLevels.innerHTML += `
+                  <div class="risk-item ${cls}">
+                    <div class="risk-date">${c.date} (aujourd'hui)</div>
+                    <div class="risk-info">
+                      <div class="risk-level">Risque d'inondation : ${lvl}</div>
+                      <div class="weather-info">
+                        <div>Probabilité : ${c.flood_percentage}%</div>
+                        ${weather_html}
+                        <div>Modèle : CNN</div>
+                      </div>
+                    </div>
+                  </div>`;
+            }
+
+            // LSTM (J+1, J+2, J+3…)
+            if (p.lstm_predictions?.length) {
+                p.lstm_predictions.forEach(l => {
+                    let cls = 'low', lvl = l.risk_level || 'Faible';
+                    if (lvl.toLowerCase().includes('élevé')) { cls = 'high'; lvl = 'Élevé'; }
+                    else if (lvl.toLowerCase().includes('modéré')) { cls = 'medium'; lvl = 'Modéré'; }
+                    
+                    const weather_html = l.weather ? `
+                        <div>Temp: ${l.weather.temp.toFixed(1)}°C</div>
+                        <div>Précip: ${l.weather.precip.toFixed(1)}mm</div>
+                        <div>Humidité: ${l.weather.humidity.toFixed(0)}%</div>
+                    ` : '';
+
+                    riskLevels.innerHTML += `
+                      <div class="risk-item ${cls}">
+                        <div class="risk-date">${l.date}</div>
+                        <div class="risk-info">
+                          <div class="risk-level">Risque : ${lvl}</div>
+                          <div class="weather-info">
+                            <div>Probabilité : ${l.probability}%</div>
+                            <div>Inondation : ${l.is_flooded ? 'Oui' : 'Non'}</div>
+                            ${weather_html}
+                            <div>Modèle : LSTM</div>
+                          </div>
+                        </div>
+                      </div>`;
+                });
+            }
+
+            // visuels CNN & plot LSTM (supprimés à la demande de l'utilisateur)
+            /* if (p.visualizations?.output_image) {
+                const img = document.createElement('img');
+                img.src = p.visualizations.output_image;
+                img.alt = 'Visu CNN';
+                img.className = 'prediction-image';
+                riskLevels.parentNode.insertBefore(img, riskLevels);
+            }
+            if (p.plot_base64) {
+                const plot = document.createElement('img');
+                plot.src = p.plot_base64;
+                plot.alt = 'Graphique LSTM';
+                plot.className = 'prediction-plot';
+                riskLevels.parentNode.appendChild(plot);
+            } */
+            return;
+        }
+    } catch {
+        console.warn('Prédictions combinées KO, fallback météo');
     }
 
-    const riskLevels = document.querySelector('.risk-levels');
-    riskLevels.innerHTML = '';
-
-    const hourlyData = weatherData.hourly;
-    const now = new Date();
-    const currentHour = now.getHours();
+    // fallback météo simple sur 4 jours
+    const weather = await fetchWeatherData(lat, lng);
+    const now = new Date(), h = now.getHours();
+    const hourly = weather.hourly;
     const forecasts = [];
-
-    // Créer 4 prévisions (aujourd'hui et 3 jours suivants)
     for (let i = 0; i < 4; i++) {
-        const date = new Date(now);
-        date.setDate(date.getDate() + i);
-        
-        // Utiliser la même heure pour chaque jour
-        const hourIndex = i * 24 + currentHour;
-        
+        const d = new Date(now);
+        d.setDate(d.getDate() + i);
+        const idx = i * 24 + h;
         forecasts.push({
-            date: date,
-            temp: hourlyData.temperature_2m[hourIndex],
-            precip: hourlyData.precipitation[hourIndex],
-            humidity: hourlyData.relative_humidity_2m[hourIndex],
-            windSpeed: hourlyData.wind_speed_10m[hourIndex]
+            date: d,
+            temp: hourly.temperature_2m[idx],
+            precip: hourly.precipitation[idx],
+            humidity: hourly.relative_humidity_2m[idx],
+            windSpeed: hourly.wind_speed_10m[idx]
         });
     }
 
-    forecasts.forEach(forecast => {
-        let riskLevel = 'Faible';
-        if (forecast.precip > 50 || forecast.humidity > 80) {
-            riskLevel = 'Élevé';
-        } else if (forecast.precip > 25 || forecast.humidity > 60) {
-            riskLevel = 'Moyen';
-        }
-
-        const riskClass = riskLevel.toLowerCase() === 'élevé' ? 'high' : 
-                         riskLevel.toLowerCase() === 'moyen' ? 'medium' : 'low';
-
-        const predHtml = `
-            <div class="risk-item ${riskClass}">
-                <div class="risk-date">${formatDate(forecast.date)}</div>
-                <div class="risk-info">
-                    <div class="risk-level">Risque d'inondation : ${riskLevel}</div>
-                    <div class="weather-info">
-                        <div>Température : ${forecast.temp.toFixed(1)}°C</div>
-                        <div>Précipitations : ${forecast.precip.toFixed(1)}mm</div>
-                        <div>Humidité : ${forecast.humidity}%</div>
-                        <div>Vent : ${forecast.windSpeed.toFixed(1)} km/h</div>
-                    </div>
-                </div>
+    riskLevels.innerHTML = '';
+    forecasts.forEach(f => {
+        let lvl = 'Faible';
+        if (f.precip > 50 || f.humidity > 80) lvl = 'Élevé';
+        else if (f.precip > 25 || f.humidity > 60) lvl = 'Moyen';
+        const cls = lvl === 'Élevé' ? 'high' : lvl === 'Moyen' ? 'medium' : 'low';
+        riskLevels.innerHTML += `
+          <div class="risk-item ${cls}">
+            <div class="risk-date">${formatDate(f.date)}</div>
+            <div class="risk-info">
+              <div class="risk-level">Risque : ${lvl}</div>
+              <div class="weather-info">
+                <div>Temp : ${f.temp.toFixed(1)}°C</div>
+                <div>Précip : ${f.precip.toFixed(1)}mm</div>
+                <div>Humidité : ${f.humidity}%</div>
+                <div>Vent : ${f.windSpeed.toFixed(1)} km/h</div>
+              </div>
             </div>
-        `;
-        riskLevels.innerHTML += predHtml;
+          </div>`;
     });
 }
 
-// Fonction pour afficher les informations de localisation dans la barre latérale
+// Mise à jour des infos de lieu / abonnement
 async function updateLocationInfo(locationData) {
-    // Créer ou récupérer le conteneur pour les infos de localisation
-    let locationInfoDiv = document.getElementById('location-info');
-    if (!locationInfoDiv) {
-        const sidebar = document.querySelector('.sidebar');
-        locationInfoDiv = document.createElement('div');
-        locationInfoDiv.id = 'location-info';
-        sidebar.insertBefore(locationInfoDiv, sidebar.firstChild);
-    }
-    
-    // Extraire les informations pertinentes
     const address = locationData.address || {};
-    let locationName = '';
-    
-    // Priorité des informations de localisation simplifiée pour plus de rapidité
-    for (const key of ['city', 'town', 'village']) {
-        if (address[key]) {
-            locationName = address[key];
-            break;
-        }
-    }
-    
-    if (!locationName && locationData.display_name) {
-        // Si on ne trouve pas de ville/village, utiliser le premier segment du display_name
-        const displayParts = locationData.display_name.split(',');
-        locationName = displayParts[0].trim();
-    }
-    
-    if (!locationName) {
-        locationName = 'Lieu sélectionné';
-    }
-    
-    // Afficher temporairement les infos de base pendant la vérification d'abonnement
-    locationInfoDiv.innerHTML = `
-        <div class="location-header">
-            <h3>Lieu sélectionné</h3>
-            <div class="location-info-row">
-                <div class="location-name">${locationName}</div>
-                <div class="subscription-loading"><span class="spinner"></span></div>
-            </div>
-        </div>
-    `;
-    
-    // Vérifier si l'utilisateur est connecté (présence du nom de profil)
-    const isLoggedIn = document.querySelector('.profile-name');
-    
-    let isSubscribed = false;
-    
-    // Si l'utilisateur est connecté, vérifier s'il est abonné à cette ville
-    if (isLoggedIn) {
+    let name = address.city || address.town || address.village 
+               || locationData.display_name.split(',')[0] || 'Lieu sélectionné';
+
+    const locDiv = document.getElementById('location-info');
+    const logged = !!document.querySelector('.profile-name');
+
+    let subscribed = false;
+    if (logged) {
         try {
-            const response = await fetch(`/api/check-subscription/?city_name=${encodeURIComponent(locationName)}`);
-            const data = await response.json();
-            isSubscribed = data.success && data.is_subscribed;
-        } catch (error) {
-            console.error('Erreur lors de la vérification de l\'abonnement:', error);
-        }
+            const res = await fetch(`/api/check-subscription/?city_name=${encodeURIComponent(name)}`);
+            const json = await res.json();
+            subscribed = json.success && json.is_subscribed;
+        } catch {}
     }
-    
-    // Construire le HTML pour afficher les informations de localisation
-    let locationHtml = `
-        <div class="location-header">
-            <h3>Lieu sélectionné</h3>
-            <div class="location-info-row">
-                <div class="location-name">${locationName}</div>
-    `;
-    
-    // Ajouter le bouton approprié selon l'état de connexion et d'abonnement
-    if (isLoggedIn) {
-        if (isSubscribed) {
-            locationHtml += `
-                <button class="subscribe-btn subscribed" type="button" onclick="toggleCitySubscription('${locationName}', 'unsubscribe')">
-                    <i class="fas fa-bell-slash"></i> Désabonner
-                </button>
-            `;
-        } else {
-            locationHtml += `
-                <button class="subscribe-btn" type="button" onclick="toggleCitySubscription('${locationName}', 'subscribe')">
-                    <i class="fas fa-bell"></i> S'abonner
-                </button>
-            `;
-        }
-    } else {
-        locationHtml += `
-            <button class="login-required-btn" type="button" onclick="window.location.href='/login/'">
-                <i class="fas fa-sign-in-alt"></i> Se connecter
-            </button>
-        `;
-    }
-    
-    locationHtml += `
-            </div>
+
+    const btn = logged
+      ? subscribed
+        ? `<button class="subscribe-btn subscribed" onclick="toggleCitySubscription('${name}','unsubscribe')">
+             <i class="fas fa-bell-slash"></i> Désabonner
+           </button>`
+        : `<button class="subscribe-btn" onclick="toggleCitySubscription('${name}','subscribe')">
+             <i class="fas fa-bell"></i> S'abonner
+           </button>`
+      : `<button class="login-required-btn" onclick="window.location.href='/login/'">
+           <i class="fas fa-sign-in-alt"></i> Se connecter
+         </button>`;
+
+    locDiv.innerHTML = `
+      <div class="location-header">
+        <h3>Lieu sélectionné</h3>
+        <div class="location-info-row">
+          <div class="location-name">${name}</div>
+          ${btn}
         </div>
-    `;
-    
-    // Afficher les informations
-    locationInfoDiv.innerHTML = locationHtml;
+      </div>`;
 }
 
-
-
-async function updatePredictions(lat, lng, weatherData) {
-    const riskLevels = document.querySelector('.risk-levels');
-    riskLevels.innerHTML = '';
-
-    const hourlyData = weatherData.hourly;
-    const now = new Date();
-    const currentHour = now.getHours();
-    const forecasts = [];
-
-    // Créer 4 prévisions (aujourd'hui et 3 jours suivants)
-    for (let i = 0; i < 4; i++) {
-        const date = new Date(now);
-        date.setDate(date.getDate() + i);
-        
-        // Utiliser la même heure pour chaque jour
-        const hourIndex = i * 24 + currentHour;
-        
-        forecasts.push({
-            date: date,
-            temp: hourlyData.temperature_2m[hourIndex],
-            precip: hourlyData.precipitation[hourIndex],
-            humidity: hourlyData.relative_humidity_2m[hourIndex],
-            windSpeed: hourlyData.wind_speed_10m[hourIndex]
-        });
-    }
-
-    // Pour chaque jour de prévision, récupérer la prédiction CNN
-    for (const forecast of forecasts) {
-        try {
-            const cnnPrediction = await fetchCnnPredictions(lat, lng, forecast.date);
-            console.log('CNN Prediction complète:', cnnPrediction);
-            
-            if (cnnPrediction && cnnPrediction.prediction) {
-                // Utilisez directement l'objet de prédiction
-                const prediction = cnnPrediction.prediction['prediction'];
-                console.log('Objet prediction:', prediction);
-                
-                
-                // Déterminer la classe de risque basée sur la prédiction
-                let riskClass = 'low';
-                let riskLevel = prediction.risk_level || 'faible';
-                
-                if (riskLevel === 'Élevé' || riskLevel === 'high') {
-                    riskClass = 'high';
-                    riskLevel = 'Élevé';
-                } else if (riskLevel === 'Modéré' || riskLevel === 'medium') {
-                    riskClass = 'medium';
-                    riskLevel = 'Modéré';
-                } else {
-                    riskClass = 'low';
-                    riskLevel = 'Faible';
-                }
-                
-                // Récupérer les valeurs avec valeurs par défaut
-                const probability = prediction.probability || prediction.flood_percentage || 0;
-
-                const predHtml = `
-                    <div class="risk-item ${riskClass}">
-                        <div class="risk-date">${formatDate(forecast.date)}</div>
-                        <div class="risk-info">
-                            <div class="risk-level">Risque d'inondation : ${riskLevel}</div>
-                            <div class="weather-info">
-                                <div>Température : ${forecast.temp.toFixed(1)}°C</div>
-                                <div>Précipitations : ${forecast.precip.toFixed(1)}mm</div>
-                                <div>Probabilité d'inondation : ${probability}%</div>
-                            </div>
-                            <div class="prediction-details">
-                                ${prediction.message || ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-                riskLevels.innerHTML += predHtml;
-            } else {
-                // Fallback au comportement original si pas de prédiction CNN
-                let riskLevel = 'Faible';
-                if (forecast.precip > 50 || forecast.humidity > 80) {
-                    riskLevel = 'Élevé';
-                } else if (forecast.precip > 25 || forecast.humidity > 60) {
-                    riskLevel = 'Moyen';
-                }
-
-                const riskClass = riskLevel.toLowerCase() === 'élevé' ? 'high' : 
-                                riskLevel.toLowerCase() === 'moyen' ? 'medium' : 'low';
-
-                const predHtml = `
-                    <div class="risk-item ${riskClass}">
-                        <div class="risk-date">${formatDate(forecast.date)}</div>
-                        <div class="risk-info">
-                            <div class="risk-level">Risque d'inondation : ${riskLevel}</div>
-                            <div class="weather-info">
-                                <div>Température : ${forecast.temp.toFixed(1)}°C</div>
-                                <div>Précipitations : ${forecast.precip.toFixed(1)}mm</div>
-                                <div>Humidité : ${forecast.humidity}%</div>
-                                <div>Vent : ${forecast.windSpeed.toFixed(1)} km/h</div>
-                            </div>
-                            <div class="prediction-note">
-                                (Prédiction basée sur les données météo simples)
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                riskLevels.innerHTML += predHtml;
-            }
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour des prédictions:', error);
-        }
-    }
-}
-
-// Fonction pour basculer l'état de l'abonnement (s'abonner ou se désabonner)
+// Toggle abonnement
 async function toggleCitySubscription(cityName, action) {
     if (!selectedMarker) return;
-    
-    const lat = selectedMarker.getLatLng().lat;
-    const lng = selectedMarker.getLatLng().lng;
-    
+    const { lat, lng } = selectedMarker.getLatLng();
     try {
-        const response = await fetch('/api/subscribe-city/', {
+        const res = await fetch('/api/subscribe-city/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCsrfToken()
             },
-            body: JSON.stringify({
-                city_name: cityName,
-                lat: lat,
-                lng: lng,
-                action: action
-            })
+            body: JSON.stringify({ city_name: cityName, lat, lng, action })
         });
-        
-        const data = await response.json();
-        if (data.success) {
-            // Afficher une notification de succès
-            showNotification(data.message, 'success');
-            
-            // Mettre à jour le bouton selon l'état de l'abonnement
-            const subscribeBtn = document.querySelector('.subscribe-btn');
-            if (subscribeBtn) {
-                if (action === 'subscribe') {
-                    subscribeBtn.innerHTML = '<i class="fas fa-bell-slash"></i> Désabonner';
-                    subscribeBtn.classList.add('subscribed');
-                    subscribeBtn.onclick = () => toggleCitySubscription(cityName, 'unsubscribe');
-                } else {
-                    subscribeBtn.innerHTML = '<i class="fas fa-bell"></i> S\'abonner';
-                    subscribeBtn.classList.remove('subscribed');
-                    subscribeBtn.onclick = () => toggleCitySubscription(cityName, 'subscribe');
-                }
-            }
-        } else {
-            showNotification('Erreur: ' + data.error, 'error');
-        }
-    } catch (error) {
-        console.error('Erreur lors de la modification de l\'abonnement:', error);
+        const json = await res.json();
+        showNotification(json.message || json.error, json.success ? 'success' : 'error');
+        updateLocationInfo({ address: {}, display_name: cityName });
+    } catch {
         showNotification('Erreur de connexion', 'error');
     }
 }
 
-// Fonction pour obtenir le token CSRF
-function getCsrfToken() {
-    const cookieValue = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('csrftoken='))
-        ?.split('=')[1];
-    return cookieValue || '';
+// Notifications
+function showNotification(msg, type) {
+    let area = document.getElementById('notifications-container');
+    if (!area) {
+        area = document.createElement('div');
+        area.id = 'notifications-container';
+        document.body.appendChild(area);
+    }
+    const n = document.createElement('div');
+    n.className = `notification ${type}`;
+    n.innerHTML = `<span>${msg}</span><button class="close-btn">×</button>`;
+    area.appendChild(n);
+    setTimeout(() => { n.classList.add('fade-out'); setTimeout(() => n.remove(), 500); }, 5000);
+    n.querySelector('.close-btn').onclick = () => n.remove();
 }
 
-// Fonction pour afficher une notification
-function showNotification(message, type) {
-    const notificationArea = document.getElementById('notifications-container') || createNotificationArea();
-    
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <span>${message}</span>
-        <button class="close-btn">×</button>
-    `;
-    
-    notificationArea.appendChild(notification);
-    
-    // Supprimer après 5 secondes
-    setTimeout(() => {
-        notification.classList.add('fade-out');
-        setTimeout(() => notification.remove(), 500);
-    }, 5000);
-    
-    // Supprimer au clic sur le bouton de fermeture
-    notification.querySelector('.close-btn').addEventListener('click', () => {
-        notification.remove();
-    });
-}
-
-// Fonction pour créer la zone de notification si elle n'existe pas
-function createNotificationArea() {
-    const area = document.createElement('div');
-    area.id = 'notifications-container';
-    area.className = 'notifications-container';
-    document.body.appendChild(area);
-    return area;
-}
-
-// Initialisation de la carte au chargement de la page
-document.addEventListener('DOMContentLoaded', function() {
+// Démarrage
+document.addEventListener('DOMContentLoaded', () => {
     initMap();
+    console.log('Carte initialisée');
 });
-
-
-
-

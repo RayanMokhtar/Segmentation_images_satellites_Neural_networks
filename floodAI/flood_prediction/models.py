@@ -79,3 +79,25 @@ class PasswordResetToken(models.Model):
     def is_expired(self):
         expiration_time = timedelta(hours=24)
         return (timezone.now() - self.created_at) > expiration_time
+
+# Modèle pour l'historique des prédictions
+class HistoriquePrediction(models.Model):
+    region = models.CharField(max_length=100, verbose_name="Nom de la région")
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    date_prediction = models.DateField(verbose_name="Date de la prédiction")
+    date_execution = models.DateTimeField(auto_now_add=True, verbose_name="Date d'exécution")
+    probabilite = models.FloatField(verbose_name="Probabilité d'inondation (%)")
+    niveau_risque = models.CharField(max_length=20, verbose_name="Niveau de risque")
+    inondation_prevue = models.BooleanField(default=False, verbose_name="Inondation prévue")
+    modele_utilise = models.CharField(max_length=50, default="CNN-LSTM", verbose_name="Modèle utilisé")
+    
+    class Meta:
+        verbose_name = "Historique de prédiction"
+        verbose_name_plural = "Historique des prédictions"
+        ordering = ['-date_execution', 'region']
+        # Une prédiction unique par région et date de prédiction
+        unique_together = ['region', 'date_prediction']
+        
+    def __str__(self):
+        return f"{self.region} - {self.date_prediction} - {self.niveau_risque} ({self.probabilite:.2f}%)"
