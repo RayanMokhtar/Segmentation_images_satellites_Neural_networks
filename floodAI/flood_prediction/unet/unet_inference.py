@@ -12,8 +12,8 @@ from skimage.transform import resize
 
 VV_PATH = "C:/Users/mokht/Desktop/PDS/flood_dataset/SEN12FLOOD/0167/S1A_IW_GRDH_1SDV_20190314T030815_20190314T030840_026328_02F196_7D7C_corrected_VV.tif"
 VH_PATH = "C:/Users/mokht/Desktop/PDS/flood_dataset/SEN12FLOOD/0167/S1B_IW_GRDH_1SDV_20190314T160711_20190314T160736_015352_01CBEE_7F77_corrected_VV.tif"
-CHECKPOINT = './models/model_20230411_161404_31'
-CHECKPOINT2="./models/model_20230412_015857_48"
+CHECKPOINT = 'C:/Users/mokht/Desktop/PDS/Pytorch-UNet-Flood-Segmentation/models/model_20230411_161404_31'
+CHECKPOINT2='C:/Users/mokht/Desktop/PDS/Pytorch-UNet-Flood-Segmentation/models/model_20230412_015857_48'
 
 
 

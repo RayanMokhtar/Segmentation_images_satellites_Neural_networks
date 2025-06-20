@@ -1,5 +1,7 @@
-from torch import nn,cat,sigmoid
-    
+import torch
+from torch import nn , cat
+from torch.nn.functional import sigmoid 
+
 class Unet(nn.Module):
     def __init__(self,in_channels,out_channels):
         super().__init__()

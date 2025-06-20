@@ -15,6 +15,7 @@ import requests
 import random
 from datetime import datetime, date, timedelta
 from .fake_prediction import predict_flood , convertir_tif_avec_rasterio
+from .fake_prediction import predict_flood_with_unet
 import base64
 import os
 
@@ -415,7 +416,85 @@ def segmentation(request):
             except Exception as e:
                 context['cnn_error'] = f"Erreur lors de la prédiction CNN: {str(e)}"
                 context['traceback'] = traceback.format_exc()
-        
+        elif model_type == 'U-Net':
+            try:
+                from .fake_prediction import predict_flood_with_unet, visualiser_resultat_segmentation
+                THRESHOLD = 0.009     # Valeur par défaut pour le seuil de probabilité
+                print(f"Lancement de la prédiction U-Net sur: {processing_path}")
+                prediction_result = predict_flood_with_unet(processing_path , threshold=THRESHOLD)
+                
+                if prediction_result.get('success') and 'files' in prediction_result:
+                    output_path = prediction_result['files'].get('output_visualization')
+                    
+                    # Récupérer d'autres informations utiles du résultat
+                    flood_percentage = prediction_result['prediction'].get('flood_percentage', 0)
+                    probability_map = prediction_result.get('probability_map')
+                    mask_path = prediction_result['files'].get('mask_path')
+                    
+                    # Créer une visualisation plus détaillée si les données nécessaires sont disponibles
+                    if mask_path and os.path.exists(mask_path):
+                        # Générer une visualisation détaillée avec visualiser_resultat_segmentation
+                        final_result_filename = f"{unique_filename}_unet_detailed.png"
+                        final_result_path = os.path.join(temp_dir, final_result_filename)
+                        
+                        detailed_viz = visualiser_resultat_segmentation(
+                            vv_path=processing_path,
+                            masque_path=mask_path,
+                            proba_map=probability_map,
+                            output_png=final_result_path,
+                            threshold=prediction_result['prediction'].get('threshold', THRESHOLD)
+                        )
+                        
+                        # Si la visualisation détaillée a réussi, utiliser ce chemin
+                        if detailed_viz and os.path.exists(detailed_viz):
+                            segmented_image_url = f"{settings.MEDIA_URL}temp_images/{os.path.basename(detailed_viz)}"
+                            print(f"Visualisation détaillée U-Net générée: {detailed_viz}")
+                            
+                            # Ajouter des informations supplémentaires au contexte
+                            context['additional_info'] = {
+                                'flood_percentage': f"{flood_percentage:.2f}%",
+                                'visualization_type': 'detailed'
+                            }
+                    
+                    # Si pas de visualisation détaillée ou si elle a échoué, utiliser la visualisation standard
+                    if not os.path.exists(output_path):
+                        context['unet_error'] = "La visualisation U-Net n'a pas été générée correctement"
+                    else:
+                        # Copier le fichier de visualisation dans le dossier temp pour l'accès web
+                        if is_tif:
+                            final_result_filename = f"{unique_filename}_unet_result.png"
+                            final_result_path = os.path.join(temp_dir, final_result_filename)
+                            
+                            import shutil
+                            shutil.copy2(output_path, final_result_path)
+                            
+                            segmented_image_url = f"{settings.MEDIA_URL}temp_images/{final_result_filename}"
+                        else:
+                            # Pour autres formats
+                            try:
+                                output_relative_path = os.path.relpath(output_path, settings.MEDIA_ROOT)
+                                segmented_image_url = f"{settings.MEDIA_URL}{output_relative_path}"
+                            except ValueError:
+                                import shutil
+                                output_filename = os.path.basename(output_path)
+                                new_output_path = os.path.join(temp_dir, output_filename)
+                                shutil.copy2(output_path, new_output_path)
+                                segmented_image_url = f"{settings.MEDIA_URL}temp_images/{output_filename}"
+                    
+                    context['prediction_result'] = prediction_result['prediction']
+                    
+                    # Ajouter des métadonnées supplémentaires si disponibles
+                    if 'metadata' in prediction_result:
+                        context['unet_metadata'] = prediction_result['metadata']
+                else:
+                    if prediction_result and 'error' in prediction_result:
+                        context['unet_error'] = f"Prédiction U-Net échouée: {prediction_result['error']}"
+                    else:
+                        context['unet_error'] = "La prédiction U-Net n'a pas généré de résultat valide."
+            
+            except Exception as e:
+                context['unet_error'] = f"Erreur lors de la prédiction U-Net: {str(e)}"
+                context['traceback'] = traceback.format_exc()
         # Mettre à jour le contexte
         context.update({
             "model_type": model_type,
