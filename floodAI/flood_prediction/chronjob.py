@@ -41,7 +41,7 @@ def cleanup_logs():
 
 # Planifie l'exécution du script de prédiction des risques pour les régions abonnées
 script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "predire_regions.py")
-schedule.every().day.at("02:45").do(job, script_path=script_path)
+schedule.every().day.at("04:28").do(job, script_path=script_path)
 logging.info(f"Script de prédiction des régions planifié pour 2h du matin: {script_path}")
 
 # Planifie le nettoyage des logs chaque jour à 23h

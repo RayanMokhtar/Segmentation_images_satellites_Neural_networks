@@ -213,6 +213,7 @@ async function updatePredictions(lat, lng) {
                     <div>Temp: ${c.weather.temp.toFixed(1)}°C</div>
                     <div>Précip: ${c.weather.precip.toFixed(1)}mm</div>
                     <div>Humidité: ${c.weather.humidity.toFixed(0)}%</div>
+                    <div>Probabilité d'inondation : ${c.flood_percentage}</div>
                 ` : '';
 
                 riskLevels.innerHTML += `

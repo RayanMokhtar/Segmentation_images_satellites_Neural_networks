@@ -24,7 +24,9 @@ WEATHER_API = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest
 ELEV_API = "https://api.opentopodata.org/v1/srtm30m"
 SOIL_API = "https://api.openepi.io/soil/type"
 NOMINATIM_API = "https://nominatim.openstreetmap.org/reverse"
-WEATHER_KEY = "MER35CT7Y4ZQUTCQSYC2SEADA"
+WEATHER_KEY = "PUTUNBTHW5R3Q9K2WUW6MPSD6"
+
+#api requête MER35CT7Y4ZQUTCQSYC2SEADA
 
 # --- Listes de features (RESTAURÉES pour correspondre à l'entraînement) ---
 TEMP_FEATS = [
